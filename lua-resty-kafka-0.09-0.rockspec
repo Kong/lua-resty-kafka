@@ -1,12 +1,18 @@
-package = "lua-resty-kafka"
-version = "0.09-0"
+package = "lua-resty-kafka-v2"
+version = "0.10-0"
 source = {
-   url = "git://github.com/doujiang24/lua-resty-kafka",
-   tag = "v0.09"
+   url = "git://github.com/kong/lua-resty-kafka",
+   tag = "v0.10"
 }
 description = {
    summary = "Lua Kafka client driver for the ngx_lua based on the cosocket API",
    detailed = [[
+     This package is a fork of https://github.com/doujiang24/lua-resty-kafka that extends
+     its functionality for:
+
+     * mTLS support
+     * SASL (PLAIN) support
+
      This Lua library is a Kafka client driver for the ngx_lua nginx module:
 
      http://wiki.nginx.org/HttpLuaModule
@@ -15,7 +21,7 @@ description = {
 
      Note that at least ngx_lua 0.9.3 or ngx_openresty 1.4.3.7 is required, and unfortunately only LuaJIT supported (--with-luajit).
    ]],
-   homepage = "https://github.com/doujiang24/lua-resty-kafka",
+   homepage = "https://github.com/kong/lua-resty-kafka",
    license = "BSD"
 }
 dependencies = {
