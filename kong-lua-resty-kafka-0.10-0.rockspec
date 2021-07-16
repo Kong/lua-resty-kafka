@@ -1,4 +1,4 @@
-package = "lua-resty-kafka"
+package = "kong-lua-resty-kafka"
 version = "0.10-0"
 source = {
    url = "git://github.com/kong/lua-resty-kafka",
