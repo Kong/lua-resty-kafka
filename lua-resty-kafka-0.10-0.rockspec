@@ -1,4 +1,4 @@
-package = "lua-resty-kafka-v2"
+package = "lua-resty-kafka"
 version = "0.10-0"
 source = {
    url = "git://github.com/kong/lua-resty-kafka",
@@ -12,6 +12,9 @@ description = {
 
      * mTLS support
      * SASL (PLAIN) support
+
+     This Lua library requires to patch OpenResty with changes made in lua-ngx-module by this PR:
+     https://github.com/openresty/lua-nginx-module/pull/1602
 
      This Lua library is a Kafka client driver for the ngx_lua nginx module:
 
