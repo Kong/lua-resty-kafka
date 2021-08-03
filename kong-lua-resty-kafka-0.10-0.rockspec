@@ -44,6 +44,7 @@ build = {
       ["resty.kafka.ringbuffer"] = "lib/resty/kafka/ringbuffer.lua",
       ["resty.kafka.sendbuffer"] = "lib/resty/kafka/sendbuffer.lua",
       ["resty.kafka.auth"] = "lib/resty/kafka/auth/init.lua",
+      ["resty.kafka.auth.scram.scramformatter"] = "lib/resty/kafka/auth/scram/scramformatter.lua",
       ["resty.kafka.auth.strategies.sasl"] = "lib/resty/kafka/auth/strategies/sasl.lua",
    }
 }

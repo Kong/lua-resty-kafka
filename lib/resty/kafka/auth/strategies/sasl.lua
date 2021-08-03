@@ -1,6 +1,6 @@
 local response = require "resty.kafka.response"
 local request = require "resty.kafka.request"
-local bxor = bit.bxor
+local scramformatter = require "resty.kafka.auth.scram.scramformatter"
 
 local to_int32 = response.to_int32
 local pid = ngx.worker.pid
@@ -138,113 +138,6 @@ local function be_tls_get_certificate_hash(sock)
     return openssl_x509_digest
 end
 
-local function hmac(key, str)
-    -- HMAC(key, str): Apply the HMAC keyed hash algorithm (defined in
-    -- [RFC2104]) using the octet string represented by "key" as the key
-    -- and the octet string "str" as the input string.  The size of the
-    -- result is the hash result size for the hash function in use.  For
-    -- example, it is 20 octets for SHA-1 (see [RFC3174]).
-    local openssl_hmac = require "resty.openssl.hmac"
-    local hmac, err = openssl_hmac.new(key, "sha256")
-
-    if not (hmac) then
-        return nil, tostring(err)
-    end
-
-    hmac:update(str)
-
-    local final_hmac, err = hmac:final()
-
-    if not (final_hmac) then
-        return nil, tostring(err)
-    end
-
-    return final_hmac
-end
-
-local function h(str)
-    -- H(str): Apply the cryptographic hash function to the octet string
-    -- "str", producing an octet string as a result.  The size of the
-    -- result depends on the hash result size for the hash function in
-    -- use.
-    local resty_sha256 = require "resty.sha256"
-    local openssl_digest = resty_sha256:new()
-
-    if not (openssl_digest) then
-        return nil, tostring("TODO err")
-    end
-
-    openssl_digest:update(str)
-
-    local digest, err = openssl_digest:final()
-
-    if not (digest) then
-        return nil, tostring(err)
-    end
-
-    return digest
-end
-
-local function xor(a, b)
-    -- XOR: Apply the exclusive-or operation to combine the octet string
-    -- on the left of this operator with the octet string on the right of
-    -- this operator.  The length of the output and each of the two
-    -- inputs will be the same for this use.
-    local result = {}
-
-    for i = 1, #a do
-        local x = a:byte(i)
-        local y = b:byte(i)
-
-        if not (x) or not (y) then
-        return
-        end
-
-        result[i] = string.char(bxor(x, y))
-    end
-
-    return table.concat(result)
-end
-
-local function hi(str, salt, i)
-    -- Hi(str, salt, i):
-
-    -- U1   := HMAC(str, salt + INT(1))
-    -- U2   := HMAC(str, U1)
-    -- ...
-    -- Ui-1 := HMAC(str, Ui-2)
-    -- Ui   := HMAC(str, Ui-1)
-
-    -- Hi := U1 XOR U2 XOR ... XOR Ui
-
-    -- where "i" is the iteration count, "+" is the string concatenation
-    -- operator, and INT(g) is a 4-octet encoding of the integer g, most
-    -- significant octet first.
-
-    -- Hi() is, essentially, PBKDF2 [RFC2898] with HMAC() as the
-    -- pseudorandom function (PRF) and with dkLen == output length of
-    -- HMAC() == output length of H().
-    local openssl_kdf = require "resty.openssl.kdf"
-
-    salt = ngx.decode_base64(salt)
-
-    local key, err = openssl_kdf.derive({
-        type = openssl_kdf.PBKDF2,
-        md = "sha256",
-        salt = salt,
-        pbkdf2_iter = i,
-        pass = str,
-        outlen = 32 -- our H() produces a 32 byte hash value (SHA-256)
-    })
-
-    if not (key) then
-        return nil, "failed to derive pbkdf2 key: " .. tostring(err)
-    end
-
-    return key
-end
-
-
 local function _sasl_auth(self, sock)
     local cli_id = "worker" .. pid()
     local req = request:new(request.SaslAuthenticateRequest, 0, cli_id, request.API_VERSION_V1)
@@ -302,57 +195,42 @@ local function _sasl_auth(self, sock)
             gs2_header = gs2_cbind_flag .. ",,"
         end
 
-
         local cbind_data = be_tls_get_certificate_hash(sock)
 
         cbind_input = gs2_header .. cbind_data
 
         local channel_binding = "c=" .. ngx.encode_base64(cbind_input)
         local _,user_salt,iteration_count = server_first_message:match("r=(.+),s=(.+),i=(.+)")
+
         if tonumber(iteration_count) < 4096 then
-			return nil, "Iteration count < 4096 which is the suggested minimum according to RFC 5802."
-		end
-        local salted_password, err = hi(password, user_salt, tonumber(iteration_count))
+          return nil, "Iteration count < 4096 which is the suggested minimum according to RFC 5802."
+        end
+
         --  SaltedPassword  := Hi(Normalize(password), salt, i)
+        local salted_password, err = scramformatter:hi(password, user_salt, tonumber(iteration_count))
         if not (salted_password) then
             return nil, tostring(err)
         end
-        local client_key, err = hmac(salted_password, "Client Key")
-        --  ClientKey       := HMAC(SaltedPassword, "Client Key")
-        if not (client_key) then
-            return nil, tostring(err)
-        end
-        local stored_key, err = h(client_key)
-        --  StoredKey       := H(ClientKey)
-        if not (stored_key) then
-            return nil, tostring(err)
-        end
-        local client_final_message_without_proof = channel_binding .. "," .. nonce
-        local auth_message = client_first_message_bare .. "," .. server_first_message .. "," .. client_final_message_without_proof
-        --  AuthMessage     := client-first-message-bare + "," +
-        --                     server-first-message + "," +
-        --                     client-final-message-without-proof
-        local client_signature, err = hmac(stored_key, auth_message)
-        --  ClientSignature := HMAC(StoredKey, AuthMessage)
-        if not (client_signature) then
-            return nil, tostring(err)
-        end
-        local proof = xor(client_key, client_signature)
-        --  ClientProof     := ClientKey XOR ClientSignature
-        if not (proof) then
-            return nil, "failed to generate the client proof"
-        end
-        local client_final_message = client_final_message_without_proof .. "," .. "p=" .. ngx.encode_base64(proof)
 
+        local client_final_message_without_proof = channel_binding .. "," .. nonce
+
+        local proof, err = scramformatter:client_proof(salted_password, client_first_message_bare, server_first_message, client_final_message_without_proof)
+        if not (proof) then
+            return nil, tostring(err)
+        end
 
         -- Constructing client-final-message
+        local client_final_message = client_final_message_without_proof .. "," .. "p=" .. ngx.encode_base64(proof)
+
         local req2 = request:new(request.SaslAuthenticateRequest, 0, cli_id, request.API_VERSION_V1)
         req2:bytes(client_final_message)
+
         -- Sending/receiving client-final-message/server-final-message
         local resp, err = _sock_send_receive(sock, req2)
         if not resp  then
             return nil, err
         end
+
         -- Decoding server-final-message
         local rc, err, msg = _sasl_auth_decode(resp)
         if not rc then
@@ -361,27 +239,21 @@ local function _sasl_auth(self, sock)
             end
             return nil, "Unkown Error during _sasl_auth[client-final-message]"
         end
-        local server_key, err = hmac(salted_password, "Server Key")
-        --  ServerKey       := HMAC(SaltedPassword, "Server Key")
 
+        --  ServerKey       := HMAC(SaltedPassword, "Server Key")
+        local server_key, err = scramformatter:hmac(salted_password, "Server Key")
         if not (server_key) then
             return nil, tostring(err)
         end
 
-        local server_signature, err = hmac(server_key, auth_message)
-        --  ServerSignature := HMAC(ServerKey, AuthMessage)
-
-        if not (server_signature) then
-            return nil, tostring(err)
-        end
-
-        server_signature = ngx.encode_base64(server_signature)
+        local server_signature = scramformatter:server_signature(server_key, client_first_message_bare,
+            server_first_message, client_final_message_without_proof)
 
         local sent_server_signature = msg:match("v=([^,]+)")
-
         if server_signature ~= sent_server_signature then
             return nil, "authentication exchange unsuccessful"
         end
+
         return 0, nil
     end
 end
