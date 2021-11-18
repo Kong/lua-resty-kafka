@@ -156,7 +156,7 @@ client config
 
 * `socket_timeout`
 
-    Specifies the network timeout threshold in milliseconds. *SHOULD* lagrer than the `request_timeout`.
+    Specifies the network timeout threshold in milliseconds. *SHOULD* be larger than the `request_timeout`.
 
 * `keepalive`
     Enable TCP keep-alives on broker sockets
