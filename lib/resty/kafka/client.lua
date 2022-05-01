@@ -108,6 +108,45 @@ local function metadata_decode(resp)
 end
 
 
+local function api_versions_encode(client_id)
+    local id = 1    -- hard code correlation_id
+    return request:new(request.ApiVersionsRequest, id, client_id, request.API_VERSION_V2)
+end
+
+
+local function api_versions_decode(resp)
+    local errcode = resp:int16()
+
+    local api_keys_num = resp:int32()
+    local api_keys = new_tab(0, api_keys_num)
+    for i = 1, api_keys_num do
+        local api_key, min_version, max_version = resp:int16(), resp:int16(), resp:int16()
+        api_keys[api_key] = {
+            min_version = min_version,
+            max_version = max_version,
+        }
+    end
+
+    return errcode, api_keys
+end
+
+
+local function _fetch_api_versions(broker, client_id)
+    local resp, err = broker:send_receive(api_versions_encode(client_id))
+    if not resp then
+        return nil, err
+    else
+        local errcode, api_versions = api_versions_decode(resp)
+
+        if errcode ~= 0 then
+            return nil, Errors[err]
+        else
+            return api_versions, nil
+        end
+    end
+end
+
+
 local function _fetch_metadata(self, new_topic)
     local topics, num = {}, 0
     for tp, _p in pairs(self.topic_partitions) do
