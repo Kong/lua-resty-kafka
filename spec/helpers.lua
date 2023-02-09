@@ -7,29 +7,26 @@ local broker_list_plain = {
 	{ host = "broker", port = 9092 },
 }
 
-local f, cert_data, key_data, cert, priv_key, _
 -- Load certificate
-
-f = assert(io.open("/certs/certchain.crt"))
-cert_data = f:read("*a")
+local f = assert(io.open("/certs/certchain.crt"))
+local cert_data = f:read("*a")
 f:close()
 if not cert_data then
   print("failed to read cert data from file")
-  print(os.execute(string.format("cat %s", "/certs/certchain.crt")))
 end
-cert, _ = ssl.parse_pem_cert(cert_data)
+local cert, _ = ssl.parse_pem_cert(cert_data)
 
 -- Load private key
-f = assert(io.open("/certs/privkey.key"))
-key_data = f:read("*a")
+local f = assert(io.open("/certs/privkey.key"))
+local key_data = f:read("*a")
 f:close()
 if not key_data then
   print("failed to read key data from file")
 end
-priv_key, _ = ssl.parse_pem_priv_key(key_data)
+local priv_key, _ = ssl.parse_pem_priv_key(key_data)
 
 -- move to fixture dir or helper file
-local function convert_to_hex(req)
+function convert_to_hex(req)
     local str = req._req[#req._req]
     local ret = ""
     for i = 1, #str do
@@ -39,12 +36,15 @@ local function convert_to_hex(req)
 end
 
 -- define topics, keys and messages etc.
-local TEST_TOPIC = "test"
-local TEST_TOPIC_1 = "test1"
-local KEY = "key"
-local MESSAGE = "message"
+TEST_TOPIC = "test"
+TEST_TOPIC_1 = "test1"
+KEY = "key"
+MESSAGE = "message"
+CERT = cert
+PRIV_KEY = priv_key
+BROKER_LIST = broker_list_plain
 
-local function compare(func, number)
+function compare(func, number)
     local req = request:new(request.ProduceRequest, 1, "clientid")
     req:int32(100)
     local correlation_id = req._req[#req._req]
@@ -60,28 +60,17 @@ end
 
 
 -- Create topics before running the tests
-local function create_topics()
+function create_topics()
     -- Not interested in the output
-    local p, err = producer:new(broker_list_plain)
-    if not p then
-      return nil, err
-    end
+    local p = producer:new(broker_list_plain)
     for i=1,10 do
-        p:send(TEST_TOPIC, KEY, i .. " try creating_topics for " .. TEST_TOPIC )
-        p:send(TEST_TOPIC_1, KEY, i .. " try creating_topics for " .. TEST_TOPIC_1)
+        p:send(TEST_TOPIC, KEY, "creating_topics for " .. TEST_TOPIC )
+        p:send(TEST_TOPIC_1, KEY, "creating_topics for " .. TEST_TOPIC_1)
     end
     ngx.sleep(2)
 end
 
 return {
-  TEST_TOPIC = TEST_TOPIC,
-  TEST_TOPIC_1 = TEST_TOPIC_1,
-  KEY = KEY,
-  MESSAGE = MESSAGE,
-  CERT = cert,
-  PRIV_KEY = priv_key,
-  BROKER_LIST = broker_list_plain,
 	convert_to_hex = convert_to_hex,
-	compare = compare,
-  create_topics = create_topics,
+	compare = compare
 }

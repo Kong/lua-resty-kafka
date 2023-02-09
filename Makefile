@@ -1,5 +1,4 @@
-OPENRESTY_PREFIX=/usr/local/openresty-debug
-
+OPENRESTY_PREFIX=/usr/local/openresty
 SHELL := /bin/bash
 PREFIX ?=          /usr/local
 LUA_INCLUDE_DIR ?= $(PREFIX)/include

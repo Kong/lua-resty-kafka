@@ -1,7 +1,7 @@
 version: '3.5'
 services:
   openresty:
-    build: openresty/
+    build: ./openresty
     container_name: dev_openresty
     hostname: test
     depends_on:
@@ -9,12 +9,24 @@ services:
     ports:
       - "8080:8081"
     volumes:
-      - ../../lua-resty-kafka:/usr/local/lib/lua/lua-resty-kafka
-      - ./openresty/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
-      - ./openresty/nginx.conf.d/:/usr/local/openresty/nginx/conf/conf.d/
-      - ./keystore/combined.key:/certs/combined.crt
-      - ./keystore/privkey.key:/certs/privkey.key
-      - ./keystore/certchain.crt:/certs/certchain.crt
+      - type: bind
+        source: ./openresty/nginx.conf
+        target: /usr/local/openresty/nginx/conf/nginx.conf
+      - type: bind
+        source: ./openresty/nginx.conf.d/
+        target: /usr/local/openresty/nginx/conf/conf.d/
+      - type: bind
+        source: ./keystore/combined.key
+        target: /certs/combined.crt
+      - type: bind
+        source: ./keystore/privkey.key
+        target: /certs/privkey.key
+      - type: bind
+        source: ./keystore/certchain.crt
+        target: /certs/certchain.crt
+      - type: bind
+        source: ../
+        target: /usr/local/lib/lua/lua-resty-kafka/
     networks:
       kafka:
 
