@@ -8,7 +8,7 @@ local client = require "resty.kafka.client"
 local Errors = require "resty.kafka.errors"
 local sendbuffer = require "resty.kafka.sendbuffer"
 local ringbuffer = require "resty.kafka.ringbuffer"
-
+local tablex = require "pl.tablex"
 
 local setmetatable = setmetatable
 local timer_at = ngx.timer.at
@@ -23,6 +23,8 @@ local debug = ngx.config.debug
 local crc32 = ngx.crc32_short
 local pcall = pcall
 local pairs = pairs
+local tx_deepcompare = tablex.deepcompare
+local tx_find = tablex.find
 
 local API_KEY = 0
 
@@ -353,12 +355,82 @@ local function negotiate_api_version(supported_version_map, api_key, max_support
     return min_version
 end
 
+-- if new arguments already exist in cached producers, then skip creating
+-- may subject to plugin (e.g. "kafka-log") schema updates
+local function _same_cluster(broker_list, producer_config, cluster_name)
+  local same_cluster = true
+
+  local producer = cluster_inited[cluster_name]
+  local producer_client = producer.client
+  local producer_ringbuffer = producer.ringbuffer
+
+  -- compare producer config
+  for k1, v1 in pairs(producer_config) do
+    -- values in producer
+    local pkeys = { "required_acks", "request_timeout", "batch_num", "batch_size",
+                    "max_retry", "retry_backoff", "flush_time" }
+    if tx_find(pkeys, k1) and producer[k1] ~= v1 then
+      same_cluster = false
+      break
+    end
+
+    if k1 == "producer_type" then
+      if v1 == "async" and not producer["async"] then
+        same_cluster = false
+        break
+      end
+
+      if v1 == "sync" and producer["async"] then
+        same_cluster = false
+        break
+      end
+    end
+
+    if k1 == "auth_config" and not tx_deepcompare(producer[k1], v1, true) then
+      same_cluster = false
+      break
+    end
+
+    -- values in client
+    local ckeys = { "socket_timeout", "keepalive_timeout", "ssl", "client_cert", "client_priv_key" }
+    if tx_find(ckeys, k1) and producer_client["socket_config"][k1] ~= v1 then
+      same_cluster = false
+      break
+    end
+
+    -- values in ringbuffer
+    if k1 == "max_buffering" and producer_ringbuffer["size"] ~= v1 * 3 then
+      same_cluster = false
+      break
+    end
+  end
+
+  -- compare broker list - the core elements
+  if not tx_deepcompare(broker_list, producer_client.broker_list, true) then
+    same_cluster = false
+  end
+
+  if same_cluster then
+    ngx_log(DEBUG, "cluster '", cluster_name, "' uses cached producer")
+
+  else
+    ngx_log(DEBUG, "cluster '", cluster_name, "' conf is changed and creating new producer")
+  end
+
+  return same_cluster
+end
+
 function _M.new(self, broker_list, producer_config, cluster_name)
     local name = cluster_name or DEFAULT_CLUSTER_NAME
     local opts = producer_config or {}
     local async = opts.producer_type == "async"
-    if async and cluster_inited[name] then
-        return cluster_inited[name]
+
+    local cached_producer = cluster_inited[name]
+    if async and cached_producer and _same_cluster(broker_list, opts, name) then
+      return cached_producer
+
+    else
+      ngx_log(DEBUG, "creating new producer for cluster '", cluster_name, "'")
     end
 
     local cli = client:new(broker_list, opts)
@@ -384,6 +456,7 @@ function _M.new(self, broker_list, producer_config, cluster_name)
         socket_config = cli.socket_config,
         auth_config = cli.auth_config,
         _timer_flushing_buffer = false,
+        flush_time = opts.flush_time,
         batch_num = opts.batch_num or 200,
         batch_size = opts.batch_size or 1048576,
         ringbuffer = ringbuffer:new(opts.batch_num or 200, opts.max_buffering or 50000),   -- 200, 50K

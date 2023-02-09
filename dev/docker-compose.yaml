@@ -21,12 +21,15 @@ services:
     image: confluentinc/cp-kafka:6.2.0
     networks:
       kafka:
-    depends_on:
-    - broker
     command: >
      /bin/bash -c "
-       kafka-configs --bootstrap-server broker:9092 --alter --add-config 'SCRAM-SHA-256 =[iterations=4096,password=client-password]' --entity-type users --entity-name client;
-       kafka-configs --bootstrap-server broker:9092 --alter --add-config 'SCRAM-SHA-512 =[iterations=4096,password=client-password]' --entity-type users --entity-name client-sha512;"
+        while ! nc -z broker 9092;
+        do
+          echo sleeping;
+          sleep 1;
+        done;
+        kafka-configs --bootstrap-server broker:9092 --alter --add-config 'SCRAM-SHA-256 =[iterations=4096,password=client-password]' --entity-type users --entity-name client;
+        kafka-configs --bootstrap-server broker:9092 --alter --add-config 'SCRAM-SHA-512 =[iterations=4096,password=client-password]' --entity-type users --entity-name client-sha512;"
     healthcheck:
       test: nc -z broker 9092
 
@@ -34,12 +37,15 @@ services:
     image: confluentinc/cp-kafka:6.2.0
     networks:
       kafka:
-    depends_on:
-    - broker
     user: root
     command: >
      /bin/bash -c "
-       kafka-delegation-tokens --bootstrap-server broker:29093 --create --max-life-time-period -1 --command-config /etc/kafka/client.config --renewer-principal User:admin | awk '/TOKENID/{getline; print}' | tr ' ' '\n'| head -2 > /etc/kafka/tokens/delegation-tokens.env"
+        while ! nc -z broker 9092;
+        do
+          echo sleeping;
+          sleep 1;
+        done;
+        kafka-delegation-tokens --bootstrap-server broker:29093 --create --max-life-time-period -1 --command-config /etc/kafka/client.config --renewer-principal User:admin | awk '/TOKENID/{getline; print}' | tr ' ' '\n'| head -2 > /etc/kafka/tokens/delegation-tokens.env"
     healthcheck:
       test: nc -z broker 9092
     volumes:
