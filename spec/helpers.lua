@@ -15,6 +15,7 @@ cert_data = f:read("*a")
 f:close()
 if not cert_data then
   print("failed to read cert data from file")
+  print(os.execute(string.format("cat %s", "/certs/certchain.crt")))
 end
 cert, _ = ssl.parse_pem_cert(cert_data)
 
