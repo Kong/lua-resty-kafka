@@ -9,19 +9,22 @@ local broker_list_plain = {
 
 local f, cert_data, key_data, cert, priv_key, _
 -- Load certificate
-repeat
-  f = assert(io.open("/certs/certchain.crt"))
-  cert_data = f:read("*a")
-  f:close()
-until cert_data
+
+f = assert(io.open("/certs/certchain.crt"))
+cert_data = f:read("*a")
+f:close()
+if not cert_data then
+  print("failed to read cert data from file")
+end
 cert, _ = ssl.parse_pem_cert(cert_data)
 
 -- Load private key
-repeat
-  f = assert(io.open("/certs/privkey.key"))
-  key_data = f:read("*a")
-  f:close()
-until key_data
+f = assert(io.open("/certs/privkey.key"))
+key_data = f:read("*a")
+f:close()
+if not key_data then
+  print("failed to read key data from file")
+end
 priv_key, _ = ssl.parse_pem_priv_key(key_data)
 
 -- move to fixture dir or helper file
