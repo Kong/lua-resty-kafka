@@ -358,8 +358,6 @@ end
 -- if new arguments already exist in cached producers, then skip creating
 -- may subject to plugin (e.g. "kafka-log") schema updates
 local function _same_cluster(broker_list, producer_config, cluster_name)
-  local same_cluster = true
-
   local producer = cluster_inited[cluster_name]
   local producer_client = producer.client
   local producer_ringbuffer = producer.ringbuffer
@@ -370,63 +368,62 @@ local function _same_cluster(broker_list, producer_config, cluster_name)
     local pkeys = { "required_acks", "request_timeout", "batch_num", "batch_size",
                     "max_retry", "retry_backoff", "flush_time" }
     if tx_find(pkeys, k1) and producer[k1] ~= v1 then
-      same_cluster = false
-      break
+      return false
     end
 
     if k1 == "producer_type" then
-      if v1 == "async" and not producer["async"] then
-        same_cluster = false
-        break
-      end
-
-      if v1 == "sync" and producer["async"] then
-        same_cluster = false
-        break
+      local async = (v1 == "async")
+      if async ~= (not not producer["async"]) then
+        return false
       end
     end
 
     if k1 == "auth_config" and not tx_deepcompare(producer[k1], v1, true) then
-      same_cluster = false
-      break
+      return false
     end
 
     -- values in client
     local ckeys = { "socket_timeout", "keepalive_timeout", "ssl", "client_cert", "client_priv_key" }
     if tx_find(ckeys, k1) and producer_client["socket_config"][k1] ~= v1 then
-      same_cluster = false
-      break
+      return false
     end
 
     -- values in ringbuffer
     if k1 == "max_buffering" and producer_ringbuffer["size"] ~= v1 * 3 then
-      same_cluster = false
-      break
+      return false
     end
   end
 
   -- compare broker list - the core elements
-  if not tx_deepcompare(broker_list, producer_client.broker_list, true) then
-    same_cluster = false
+  if #broker_list ~= #producer_client.broker_list then
+    return false
+  end
+  -- usually there are only a few brokers
+  for _, new_broker in ipairs(broker_list) do
+    local flg = false
+    for _, old_broker in ipairs(producer_client.broker_list) do
+      if tx_deepcompare(new_broker, old_broker, true) then
+        flg = true
+        break
+      end
+    end
+    if not flg then
+      return false
+    end
   end
 
-  if same_cluster then
-    ngx_log(DEBUG, "cluster '", cluster_name, "' uses cached producer")
-
-  else
-    ngx_log(DEBUG, "cluster '", cluster_name, "' conf is changed and creating new producer")
-  end
-
-  return same_cluster
+  return true
 end
 
 function _M.new(self, broker_list, producer_config, cluster_name)
     local name = cluster_name or DEFAULT_CLUSTER_NAME
+    local broker_list = broker_list or {}
     local opts = producer_config or {}
     local async = opts.producer_type == "async"
 
     local cached_producer = cluster_inited[name]
     if async and cached_producer and _same_cluster(broker_list, opts, name) then
+      ngx_log(DEBUG, "return cached producer for cluster '", cluster_name, "'")
       return cached_producer
 
     else

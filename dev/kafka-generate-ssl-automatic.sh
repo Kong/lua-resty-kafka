@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# set -eu    # debug only
+set -eu
 
 KEYSTORE_FILENAME="kafka.keystore.jks"
 CLIENT_KEYSTORE_FILENAME="client.keystore.jks"
@@ -24,7 +24,7 @@ PASS="confluent"
 
 function file_exists_and_exit() {
   echo "'$1' cannot exist. Move or delete it before"
-  echo "you are re-running this script."
+  echo "re-running this script."
   exit 1
 }
 

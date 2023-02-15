@@ -55,7 +55,7 @@ describe("Test producers: ", function()
   it("avoid cached producer when cluster config is updated", function()
     local producer_config = { producer_type = "async" }
     local cluster_name = "kong"
-    local p1, p2, p3, err
+    local p1, p2, p3, p4, err
 
     p1, err = producer:new(broker_list_plain, producer_config, cluster_name)
     assert.is_nil(err)
@@ -67,11 +67,16 @@ describe("Test producers: ", function()
     assert.is_nil(p2)
     assert.are.equal("Could not retrieve version map from cluster", err)
 
+    -- empty broker list
+    p3, err = producer:new(nil, producer_config, cluster_name)
+    assert.is_nil(p3)
+    assert.are.equal("Could not retrieve version map from cluster", err)
+
     -- reuse cache
     local broker_list_plain_dup = tx_deepcopy(broker_list_plain)
-    p3, err = producer:new(broker_list_plain_dup, producer_config, cluster_name)
+    p4, err = producer:new(broker_list_plain_dup, producer_config, cluster_name)
     assert.is_nil(err)
-    assert.are.equal(p3, p1)
+    assert.are.equal(p4, p1)
   end)
 
   it("sends two messages to two different topics", function()
