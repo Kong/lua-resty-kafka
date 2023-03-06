@@ -31,7 +31,8 @@ description = {
 }
 dependencies = {
    "lua >= 5.1",
-   "lua-resty-openssl"
+   "lua-resty-openssl",
+   "penlight == 1.13.1",
 }
 build = {
    type = "builtin",

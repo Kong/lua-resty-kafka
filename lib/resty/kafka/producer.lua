@@ -355,64 +355,98 @@ local function negotiate_api_version(supported_version_map, api_key, max_support
     return min_version
 end
 
--- if new arguments already exist in cached producers, then skip creating
--- may subject to plugin (e.g. "kafka-log") schema updates
-local function _same_cluster(broker_list, producer_config, cluster_name)
-  local producer = cluster_inited[cluster_name]
-  local producer_client = producer.client
-  local producer_ringbuffer = producer.ringbuffer
 
-  -- compare producer config
-  for k1, v1 in pairs(producer_config) do
-    -- values in producer
+local function compare_config_opts(opts, cached_producer)
+  -- compare config options with cache
+  -- return true if values are equal
+
+  local cached_client = cached_producer.client
+  local cached_ringbuffer = cached_producer.ringbuffer
+
+  for k1, v1 in pairs(opts) do
+    -- compare producer options
     local pkeys = { "required_acks", "request_timeout", "batch_num", "batch_size",
                     "max_retry", "retry_backoff", "flush_time" }
-    if tx_find(pkeys, k1) and producer[k1] ~= v1 then
-      return false
+    if tx_find(pkeys, k1) and cached_producer[k1] ~= v1 then
+      return false, "config '" .. k1 .. "' is changed"
     end
 
     if k1 == "producer_type" then
       local async = (v1 == "async")
-      if async ~= (not not producer["async"]) then
-        return false
+      if async ~= (not not cached_producer["async"]) then
+        return false, "config '" .. k1 .. "' is changed"
       end
     end
 
-    if k1 == "auth_config" and not tx_deepcompare(producer[k1], v1, true) then
-      return false
+    if k1 == "auth_config" and not tx_deepcompare(cached_producer[k1], v1, true) then
+      return false, "config '" .. k1 .. "' is changed"
     end
 
-    -- values in client
+    -- compare redis client options
     local ckeys = { "socket_timeout", "keepalive_timeout", "ssl", "client_cert", "client_priv_key" }
-    if tx_find(ckeys, k1) and producer_client["socket_config"][k1] ~= v1 then
-      return false
+    if tx_find(ckeys, k1) and cached_client["socket_config"][k1] ~= v1 then
+      return false, "config '" .. k1 .. "' is changed"
     end
 
-    -- values in ringbuffer
-    if k1 == "max_buffering" and producer_ringbuffer["size"] ~= v1 * 3 then
-      return false
+    -- compare ringbuffer options
+    if k1 == "max_buffering" and cached_ringbuffer["size"] ~= v1 * 3 then
+      return false, "config '" .. k1 .. "' is changed"
     end
   end
 
-  -- compare broker list - the core elements
-  if #broker_list ~= #producer_client.broker_list then
-    return false
+  return true
+end
+
+local function compare_broker_list(broker_list, cached_producer)
+  -- compare broker list with cache
+  -- return true if values are equal
+
+  local cached_client = cached_producer.client
+
+  if #broker_list ~= #cached_client.broker_list then
+    return false, "config 'broker_list' is changed"
   end
-  -- usually there are only a few brokers
+
   for _, new_broker in ipairs(broker_list) do
+    -- usually there are only a few brokers
+
     local flg = false
-    for _, old_broker in ipairs(producer_client.broker_list) do
-      if tx_deepcompare(new_broker, old_broker, true) then
+    for _, cached_broker in ipairs(cached_client.broker_list) do
+      if tx_deepcompare(new_broker, cached_broker, true) then
         flg = true
         break
       end
     end
     if not flg then
-      return false
+      return false, "config 'broker_list' is changed"
     end
   end
 
   return true
+end
+
+local function is_same_producer_config(broker_list, opts, cached_producer)
+  -- if new config has the same values as the cached producer, skip creating
+
+  local ok1, ok2, err
+
+  -- compare broker list
+  ok1, err = compare_broker_list(broker_list, cached_producer)
+  if not ok1 then
+    ngx_log(DEBUG, err)
+  end
+
+  -- compare config options
+  ok2, err = compare_config_opts(opts, cached_producer)
+  if not ok2 then
+    ngx_log(DEBUG, err)
+  end
+
+  if ok1 and ok2 then
+    ngx_log(DEBUG, "the same producer config received")
+    return true
+  end
+  return false
 end
 
 function _M.new(self, broker_list, producer_config, cluster_name)
@@ -422,7 +456,7 @@ function _M.new(self, broker_list, producer_config, cluster_name)
     local async = opts.producer_type == "async"
 
     local cached_producer = cluster_inited[name]
-    if async and cached_producer and _same_cluster(broker_list, opts, name) then
+    if async and cached_producer and is_same_producer_config(broker_list, opts, cached_producer) then
       ngx_log(DEBUG, "return cached producer for cluster '", cluster_name, "'")
       return cached_producer
 
