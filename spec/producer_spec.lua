@@ -55,7 +55,7 @@ describe("Test producers: ", function()
   it("avoid cached producer when cluster config is updated", function()
     local producer_config = { producer_type = "async" }
     local cluster_name = "kong"
-    local p1, p2, p3, p4, err
+    local p1, p2, p3, p4, p5, err
 
     p1, err = producer:new(broker_list_plain, producer_config, cluster_name)
     assert.is_nil(err)
@@ -77,6 +77,12 @@ describe("Test producers: ", function()
     p4, err = producer:new(broker_list_plain_dup, producer_config, cluster_name)
     assert.is_nil(err)
     assert.are.equal(p4, p1)
+
+    -- avoid cache and create new
+    local broker_list_plain_dup = tx_deepcopy(broker_list_plain)
+    p5, err = producer:new(broker_list_plain_dup, { request_timeout = 1000 } , cluster_name)
+    assert.is_nil(err)
+    assert.are_not.equals(p5, p1)
   end)
 
   it("sends two messages to two different topics", function()
