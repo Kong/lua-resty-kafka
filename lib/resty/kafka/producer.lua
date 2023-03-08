@@ -39,7 +39,7 @@ if not ok then
 end
 
 
-local _M = { _VERSION = "0.14" }
+local _M = { _VERSION = "0.15" }
 local mt = { __index = _M }
 
 
