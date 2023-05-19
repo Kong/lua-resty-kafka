@@ -5,6 +5,8 @@ local setmetatable = setmetatable
 local pairs = pairs
 local next = next
 
+local ngx_sleep = ngx.sleep
+
 
 local ok, new_tab = pcall(require, "table.new")
 if not ok then
@@ -17,12 +19,14 @@ local MAX_REUSE = 10000
 local _M = {}
 local mt = { __index = _M }
 
-function _M.new(self, batch_num, batch_size)
+function _M.new(self, batch_num, batch_size, max_retry, retry_backoff)
     local sendbuffer = {
         topics = {},
         queue_num = 0,
         batch_num = batch_num * 2,
         batch_size = batch_size,
+        max_retry = max_retry or 3,
+        retry_backoff = retry_backoff or 100,  -- ms
     }
     return setmetatable(sendbuffer, mt)
 end
@@ -147,12 +151,26 @@ function _M.aggregator(self, client)
     local sendbroker = {}
     local brokers = {}
 
-    local i = 1
     for topic, partition_id, queue in self:loop() do
         if queue.retryable then
-            local broker_conf, err = client:choose_broker(topic, partition_id)
+            local broker_conf, errors, err
+            local try_num = 0
+            while try_num <= self.max_retry do
+                broker_conf, err = client:choose_broker(topic, partition_id)
+                if not broker_conf then
+                  errors = errors and errors .."; ".. err or err
+
+                  client:refresh()
+                  ngx_sleep(self.retry_backoff / 1000)   -- ms to s
+                  try_num = try_num + 1
+
+                else
+                  break
+                end
+            end
+
             if not broker_conf then
-                self:err(topic, partition_id, err, true)
+                self:err(topic, partition_id, errors, true)
 
             else
                 if not brokers[broker_conf] then
