@@ -102,7 +102,7 @@ describe("Test producers: ", function()
     local offset, err = p:send(TEST_TOPIC, key, message)
     assert.is_not_nil(err)
     assert.is_nil(offset)
-    assert.is_same("not found broker", err)
+    assert.is_same("not found broker; not found partition; not found partition; not found partition", err)
   end)
 
   it("sends a lot of messages", function()
