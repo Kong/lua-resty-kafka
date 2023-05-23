@@ -251,7 +251,7 @@ describe("Test producers: ", function()
     assert.is_truthy(p)
     assert.is_nil(err)
     ngx.sleep(0.1)  -- immediate timer_flush
-    ok, err = p:send(TEST_TOPIC, key, "beforestop message")
+    ok, err = p:send("brokerdown", key, "beforestop message")
     assert.is_truthy(ok)
     assert.is_nil(err)
 
@@ -259,7 +259,7 @@ describe("Test producers: ", function()
     ok = os.execute(string.format("docker compose -p dev %s broker2", "stop"))
     assert.is_truthy(ok)
 
-    ok, err = p:send(TEST_TOPIC, key, "afterstop message")
+    ok, err = p:send("brokerdown", key, "afterstop message")
     assert.is_truthy(ok)
     assert.is_nil(err)
 
@@ -267,7 +267,7 @@ describe("Test producers: ", function()
     assert.is_truthy(ok)
 
     ngx.sleep(15)  -- wait for rediscovery
-    ok, err = p:send(TEST_TOPIC, key, "backonline message")
+    ok, err = p:send("brokerdown", key, "backonline message")
     assert.is_truthy(ok)
     assert.is_nil(err)
   end)
@@ -279,16 +279,15 @@ describe("Test producers: ", function()
     assert.is_truthy(p)
     assert.is_nil(err)
     ngx.sleep(1)
-    offset, err = p:send(TEST_TOPIC, key, "beforestop message")
-    print("offset = ", offset)
-    print("err = ", err)
+    offset, err = p:send("brokerdown", key, "beforestop message")
     assert.is_truthy(tonumber(offset) > 0)
     assert.is_nil(err)
 
     ok = os.execute(string.format("docker compose -p dev %s broker2", "stop"))
     assert.is_truthy(ok)
 
-    offset, err = p:send(TEST_TOPIC, key, "afterstop message")
+    ngx.sleep(5)
+    offset, err = p:send("brokerdown", key, "afterstop message")
     assert.is_nil(offset)
     assert.is_same("not found broker; not found broker; not found broker", err)
 
@@ -296,7 +295,7 @@ describe("Test producers: ", function()
     assert.is_truthy(ok)
 
     ngx.sleep(15)  -- wait for rediscovery
-    offset, err = p:send(TEST_TOPIC, key, "backonline message")
+    offset, err = p:send("brokerdown", key, "backonline message")
     assert.is_truthy(tonumber(offset) > 0)
     assert.is_nil(err)
   end)

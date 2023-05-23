@@ -25,6 +25,9 @@ setup-certs:
 
 devup: setup-certs
 	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml up -d
+	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic test --replica-assignment 1
+	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic test1 --replica-assignment 1
+	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic brokerdown --replica-assignment 2
 
 test:
 	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T openresty luarocks make
