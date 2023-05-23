@@ -24,7 +24,7 @@ setup-certs:
 	cd dev/; bash kafka-generate-ssl-automatic.sh; cd -
 
 devup: setup-certs
-	docker-compose -f dev/docker-compose.yaml  -f dev/docker-compose.dev.yaml up -d
+	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml up -d
 
 test:
 	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T openresty luarocks make

@@ -4,7 +4,16 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
-RUN apt-get install inotify-tools -y
+RUN apt-get -y install inotify-tools ca-certificates curl gnupg
+
+RUN install -m 0755 -d /etc/apt/keyrings
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+RUN chmod a+r /etc/apt/keyrings/docker.gpg
+RUN echo \
+  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+RUN apt-get update && apt-get -y install docker-ce-cli
 
 RUN    echo "deb-src http://archive.ubuntu.com/ubuntu bionic main" >> /etc/apt/sources.list
 RUN    sed 's/main$/main universe/' -i /etc/apt/sources.list

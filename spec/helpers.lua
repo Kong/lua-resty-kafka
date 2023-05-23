@@ -62,7 +62,11 @@ end
 -- Create topics before running the tests
 function create_topics()
     -- Not interested in the output
-    local p = producer:new(broker_list_plain)
+    local p, err = producer:new(broker_list_plain)
+    if err then
+      print("failed to create producer: ", err)
+      return err
+    end
     for i=1,10 do
         p:send(TEST_TOPIC, KEY, "creating_topics for " .. TEST_TOPIC )
         p:send(TEST_TOPIC_1, KEY, "creating_topics for " .. TEST_TOPIC_1)

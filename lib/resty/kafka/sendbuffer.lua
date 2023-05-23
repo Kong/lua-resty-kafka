@@ -154,7 +154,7 @@ function _M.aggregator(self, client)
     for topic, partition_id, queue in self:loop() do
         if queue.retryable then
             local broker_conf, errors, err
-            local try_num = 0
+            local try_num = 1
             while try_num <= self.max_retry do
                 broker_conf, err = client:choose_broker(topic, partition_id)
                 if not broker_conf then

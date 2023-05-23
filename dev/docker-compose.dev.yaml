@@ -27,6 +27,9 @@ services:
       - type: bind
         source: ../
         target: /usr/local/lib/lua/lua-resty-kafka/
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
     networks:
       kafka:
 

@@ -96,13 +96,67 @@ describe("Test producers: ", function()
     assert.is_number(tonumber(offset2))
   end)
 
+  it("works when broker is down and brought back online (async)", function()
+    local p, ok, err
+
+    p, err = producer:new({ { host = "broker", port = 9092 } }, { producer_type = "async" })
+    assert.is_truthy(p)
+    assert.is_nil(err)
+    ngx.sleep(0.1)  -- immediate timer_flush
+    ok, err = p:send(TEST_TOPIC, key, "beforestop message")
+    assert.is_truthy(ok)
+    assert.is_nil(err)
+
+    ngx.sleep(1) -- make sure the previous msg is sent before stop
+    ok = os.execute(string.format("docker compose -p dev %s broker2", "stop"))
+    assert.is_truthy(ok)
+
+    ok, err = p:send(TEST_TOPIC, key, "afterstop message")
+    assert.is_truthy(ok)
+    assert.is_nil(err)
+
+    ok = os.execute(string.format("docker compose -p dev %s broker2", "start"))
+    assert.is_truthy(ok)
+
+    ngx.sleep(15)  -- wait for rediscovery
+    ok, err = p:send(TEST_TOPIC, key, "backonline message")
+    assert.is_truthy(ok)
+    assert.is_nil(err)
+  end)
+
+  it("works when broker is down and brought back online (sync)", function()
+    local p, offset, ok, err
+
+    p, err = producer:new({ { host = "broker", port = 9092 } })
+    assert.is_truthy(p)
+    assert.is_nil(err)
+    offset, err = p:send(TEST_TOPIC, key, "beforestop message")
+    assert.is_truthy(tonumber(offset) > 0)
+    assert.is_nil(err)
+
+    ok = os.execute(string.format("docker compose -p dev %s broker2", "stop"))
+    assert.is_truthy(ok)
+
+    offset, err = p:send(TEST_TOPIC, key, "afterstop message")
+    assert.is_nil(offset)
+    assert.is_same("not found broker; not found broker; not found broker; not found broker", err)
+
+    ok = os.execute(string.format("docker compose -p dev %s broker2", "start"))
+    assert.is_truthy(ok)
+
+    ngx.sleep(15)  -- wait for rediscovery
+    offset, err = p:send(TEST_TOPIC, key, "backonline message")
+    assert.is_truthy(tonumber(offset) > 0)
+    assert.is_nil(err)
+  end)
+
   it("fails when topic_partitions are empty", function()
     local p, err = producer:new(broker_list_plain)
     p.client.topic_partitions.test = { [2] = { id = 2, leader = 0 }, [1] = { id = 1, leader = 0 }, [0] = { id = 0, leader = 0 }, num = 3 }
     local offset, err = p:send(TEST_TOPIC, key, message)
     assert.is_not_nil(err)
     assert.is_nil(offset)
-    assert.is_same("not found broker; not found partition; not found partition; not found partition", err)
+    assert.is_same("not found broker; not found partition; not found partition", err)
   end)
 
   it("sends a lot of messages", function()
