@@ -287,7 +287,7 @@ describe("Test producers: ", function()
 
     offset, err = p:send(TEST_TOPIC, key, "afterstop message")
     assert.is_nil(offset)
-    assert.is_same("not found broker; not found broker; not found broker; not found broker", err)
+    assert.is_same("not found broker; not found broker; not found broker", err)
 
     ok = os.execute(string.format("docker compose -p dev %s broker2", "start"))
     assert.is_truthy(ok)
