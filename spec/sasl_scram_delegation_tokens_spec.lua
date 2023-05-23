@@ -38,9 +38,9 @@ describe("Testing sasl scram client [delegation tokens]", function()
   it("to fetch metadata correctly", function()
     -- Fetch metadata
     local brokers, partitions = cli:fetch_metadata(TEST_TOPIC)
-    assert.are.same({{host = "broker", port = 19093}}, brokers)
+    assert.are.same({{host = "broker", port = 19093}, {host = "broker2", port = 19093}}, brokers)
     -- Check if return is as expected
-    assert.are.same({{host = "broker", port = 19093}}, cli.brokers)
+    assert.are.same({{host = "broker", port = 19093}, {host = "broker2", port = 19093}}, cli.brokers)
     -- Check if return was assigned to cli metatable
     assert.are.same({errcode = 0, id = 0, isr = {1}, leader = 1, replicas = {1}},partitions[0])
     -- Check if partitions were fetched correctly
