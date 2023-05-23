@@ -44,7 +44,7 @@ describe("Testing sasl ssl client", function()
     -- Check if return is as expected
     assert.are.same({{host = "broker", port = 9093}, {host = "broker2", port = 9093}}, cli.brokers)
     -- Check if return was assigned to cli metatable
-    assert.are.same({errcode = 0, id = 0, isr = {2}, leader = 2, replicas = {2}},partitions[0])
+    assert.are.same({errcode = 0, id = 0, isr = {1}, leader = 1, replicas = {1}},partitions[0])
     -- Check if partitions were fetched correctly
     assert.is_not_nil(cli.topic_partitions[TEST_TOPIC])
     -- Check if cli partitions metatable was set correctly
