@@ -518,7 +518,7 @@ local function _sync_send(self, topic, key, message)
 
     -- avoid race conditions
     -- different sendbuffers share self.client in _batch_send()
-    local sendbuffer = sendbuffer:new(self.batch_num, self.batch_size)
+    local sendbuffer = sendbuffer:new(self.batch_num, self.batch_size, self.max_retry, self.retry_backoff)
     sendbuffer:add(topic, partition_id, key, message)
 
     local ok = _batch_send(self, sendbuffer)
