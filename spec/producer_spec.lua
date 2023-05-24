@@ -6,6 +6,8 @@ local tx_deepcopy = tablex.deepcopy
 local broker_list_plain = BROKER_LIST
 local key = KEY
 local message = MESSAGE
+local tonumber = tonumber
+local ngx_sleep = ngx.sleep
 
 describe("Test producers: ", function()
 
@@ -118,7 +120,7 @@ describe("Test producers: ", function()
           p:send(TEST_TOPIC, key, message..tostring(i))
           i = i + 1
     end
-    ngx.sleep(0.2)
+    ngx_sleep(0.2)
     local offset2, _ = p:offset()
     local diff = tostring(offset2 - offset)
     assert.is.equal(diff, "2000LL")
@@ -126,11 +128,11 @@ describe("Test producers: ", function()
 
   it("test message buffering", function()
     local p = producer:new(broker_list_plain, { producer_type = "async", flush_time = 1000 })
-    ngx.sleep(0.1) -- will have an immediately flush by timer_flush
+    ngx_sleep(0.1) -- will have an immediately flush by timer_flush
     local size, err = p:send(TEST_TOPIC, key, message)
     assert.is_not_nil(size)
     assert.is_nil(err)
-    ngx.sleep(1.1)
+    ngx_sleep(1.1)
     local offset = p:offset()
     assert.is_true(tonumber(offset) > 0)
     p:flush()
@@ -148,19 +150,19 @@ describe("Test producers: ", function()
 
   it("timer flush", function()
     local p = producer:new(broker_list_plain, { producer_type = "async", flush_time = 1000 })
-    ngx.sleep(0.1) -- will have an immediately flush by timer_flush
+    ngx_sleep(0.1) -- will have an immediately flush by timer_flush
 
     local size, err = p:send(TEST_TOPIC, key, message)
     assert.is_not_nil(size)
     assert.is_nil(err)
-    ngx.sleep(1.1)
+    ngx_sleep(1.1)
     local offset = p:offset()
     assert.is_true(tonumber(offset) > 0)
   end)
 
   it("multi topic batch send", function()
     local p = producer:new(broker_list_plain, { producer_type = "async", flush_time = 10000})
-    ngx.sleep(0.01)
+    ngx_sleep(0.01)
     -- 2 message
     local size, err = p:send(TEST_TOPIC, key, message)
     assert.is_not_nil(size)
@@ -187,7 +189,7 @@ describe("Test producers: ", function()
 
   it("is not retryable ", function()
     local p = producer:new(broker_list_plain, { producer_type = "async", flush_time = 10000})
-    ngx.sleep(0.01)
+    ngx_sleep(0.01)
     local size, err = p:send(TEST_TOPIC, key, message)
     assert.is_not_nil(size)
     assert.is_nil(err)
@@ -209,7 +211,7 @@ describe("Test producers: ", function()
 
   it("sends in batches to two topics", function()
     local p = producer:new(broker_list_plain, { producer_type = "async", flush_time = 10000})
-    ngx.sleep(0.01)
+    ngx_sleep(0.01)
     -- 2 message
     local size, err = p:send(TEST_TOPIC, key, message)
     assert.is_not_nil(size)
@@ -231,12 +233,12 @@ describe("Test producers: ", function()
 
   it("buffer flush", function()
     local p = producer:new(broker_list_plain, { producer_type = "async", batch_num = 1, flush_time = 10000})
-    ngx.sleep(0.1) -- will have an immediately flush by timer_flush
+    ngx_sleep(0.1) -- will have an immediately flush by timer_flush
 
     local ok, err = p:send(TEST_TOPIC, nil, message)
     assert.is_not_nil(ok)
     assert.is_nil(err)
-    ngx.sleep(1)
+    ngx_sleep(1)
     local offset0 = p:offset()
     p:flush()
     local offset1 = p:offset()
@@ -250,12 +252,12 @@ describe("Test producers: ", function()
     p, err = producer:new({ { host = "broker", port = 9092 } }, { producer_type = "async" })
     assert.is_truthy(p)
     assert.is_nil(err)
-    ngx.sleep(0.1)  -- immediate timer_flush
+    ngx_sleep(0.1)  -- immediate timer_flush
     ok, err = p:send("brokerdown", key, "beforestop message")
     assert.is_truthy(ok)
     assert.is_nil(err)
 
-    ngx.sleep(1) -- make sure the previous msg is sent before stop
+    ngx_sleep(1) -- make sure the previous msg is sent before stop
     ok = os.execute(string.format("docker compose -p dev %s broker2", "stop"))
     assert.is_truthy(ok)
 
@@ -266,7 +268,7 @@ describe("Test producers: ", function()
     ok = os.execute(string.format("docker compose -p dev %s broker2", "start"))
     assert.is_truthy(ok)
 
-    ngx.sleep(15)  -- wait for rediscovery
+    ngx_sleep(15)  -- wait for rediscovery
     ok, err = p:send("brokerdown", key, "backonline message")
     assert.is_truthy(ok)
     assert.is_nil(err)
@@ -278,7 +280,7 @@ describe("Test producers: ", function()
     p, err = producer:new({ { host = "broker", port = 9092 } })
     assert.is_truthy(p)
     assert.is_nil(err)
-    ngx.sleep(1)
+    ngx_sleep(1)
     offset, err = p:send("brokerdown", key, "beforestop message")
     assert.is_truthy(tonumber(offset) > 0)
     assert.is_nil(err)
@@ -286,7 +288,7 @@ describe("Test producers: ", function()
     ok = os.execute(string.format("docker compose -p dev %s broker2", "stop"))
     assert.is_truthy(ok)
 
-    ngx.sleep(5)
+    ngx_sleep(5)
     offset, err = p:send("brokerdown", key, "afterstop message")
     assert.is_nil(offset)
     assert.is_same("not found broker; not found broker; not found broker", err)
@@ -294,7 +296,7 @@ describe("Test producers: ", function()
     ok = os.execute(string.format("docker compose -p dev %s broker2", "start"))
     assert.is_truthy(ok)
 
-    ngx.sleep(15)  -- wait for rediscovery
+    ngx_sleep(15)  -- wait for rediscovery
     offset, err = p:send("brokerdown", key, "backonline message")
     assert.is_truthy(tonumber(offset) > 0)
     assert.is_nil(err)
