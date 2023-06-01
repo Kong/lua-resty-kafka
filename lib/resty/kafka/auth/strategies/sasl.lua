@@ -130,13 +130,7 @@ local function be_tls_get_certificate_hash(sock)
 
     local openssl_x509 = require("resty.openssl.x509").new(pem, "PEM")
 
-    local openssl_x509_digest, err = openssl_x509:digest(signature)
-
-    if not (openssl_x509_digest) then
-    return nil, tostring(err)
-    end
-
-    return openssl_x509_digest
+    return openssl_x509:digest(signature)
 end
 
 local function hmac(key, str, hf)
@@ -325,7 +319,10 @@ local function _sasl_auth(self, sock)
         end
 
 
-        local cbind_data = be_tls_get_certificate_hash(sock)
+        local cbind_data, err = be_tls_get_certificate_hash(sock)
+        if err then
+            return nil, "failed to calculate certificate hash " .. err
+        end
 
         cbind_input = gs2_header .. cbind_data
 
