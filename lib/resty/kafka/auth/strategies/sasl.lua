@@ -124,8 +124,13 @@ local function be_tls_get_certificate_hash(sock)
 
     signature = signature:lower()
 
-    if signature:match("md5") or signature:match("sha1") then
+    if signature:match("^md5") or signature:match("^sha1") or signature:match("sha1$") or signature:match("sha256$") then
         signature = "sha256"
+    else
+        local objects = require("resty.openssl.objects")
+        local sigid = assert(objects.txt2nid(signature))
+        local digest_nid = assert(objects.find_sigid_algs(sigid))
+        signature = assert(objects.nid2table(digest_nid).sn)
     end
 
     local openssl_x509 = require("resty.openssl.x509").new(pem, "PEM")
