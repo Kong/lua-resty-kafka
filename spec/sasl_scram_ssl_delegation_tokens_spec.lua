@@ -5,6 +5,7 @@ local message = MESSAGE
 
 local broker_list_sasl_ssl = {
     { host = "broker", port = 9093 },
+    { host = "broker2", port = 9093 },
 }
 
 local tokenid = os.getenv("TOKENID")

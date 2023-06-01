@@ -5,6 +5,7 @@ local message = MESSAGE
 
 local broker_list_sasl = {
     { host = "broker", port = 19093 },
+    { host = "broker2", port = 19093 },
 }
 local sasl_config = { strategy="sasl",
                       mechanism="SCRAM-SHA-256",
