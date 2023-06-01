@@ -130,7 +130,7 @@ local function be_tls_get_certificate_hash(sock)
 
     local openssl_x509 = require("resty.openssl.x509").new(pem, "PEM")
 
-    local openssl_x509_digest, err = openssl_x509:digest(signature, "s")
+    local openssl_x509_digest, err = openssl_x509:digest(signature)
 
     if not (openssl_x509_digest) then
     return nil, tostring(err)
