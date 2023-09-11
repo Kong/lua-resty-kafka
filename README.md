@@ -45,10 +45,6 @@ comes with a set of additional features.
   * SCRAM-SHA-512
   * Delegation Tokens
 
-For these features to work you need a patched version of openresty. [See this source](https://github.com/Kong/kong-build-tools/tree/master/openresty-patches/patches/1.19.3.2)
-
-The test environment that comes with this repository provides a patched version of openresty. [See the development part of this README](#Development).
-
 Description
 ===========
 

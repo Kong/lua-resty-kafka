@@ -68,15 +68,13 @@ function _M.send_receive(self, request)
     end
 
     if self.config.ssl then
-        -- TODO: add reused_session for better performance of short-lived connections
-        local opts = {
-            ssl_verify = self.config.ssl_verify,
-            client_cert = self.config.client_cert,
-            client_priv_key = self.config.client_priv_key,
-        }
+        if self.config.client_cert and self.config.client_priv_key then
+            sock:setclientcert(self.config.client_cert, self.config.client_priv_key)
+        end
 
+        -- TODO: add reused_session for better performance of short-lived connections
+        local _, err = sock:sslhandshake(nil, nil, self.config.ssl_verify)
         -- TODO END
-        local _, err = sock:tlshandshake(opts)
         if err then
             return nil, "failed to do SSL handshake with " ..
                         self.host .. ":" .. tostring(self.port) .. ": " .. err, true
