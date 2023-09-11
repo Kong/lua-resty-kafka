@@ -1,8 +1,8 @@
 package = "kong-lua-resty-kafka"
-version = "0.16-0"
+version = "0.17-0"
 source = {
    url = "git+https://github.com/Kong/lua-resty-kafka",
-   tag = "v0.16"
+   tag = "v0.17"
 }
 description = {
    summary = "Lua Kafka client driver for the ngx_lua based on the cosocket API",
