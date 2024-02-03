@@ -6,6 +6,7 @@ on:
     branches: [master]
 jobs:
   test:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
