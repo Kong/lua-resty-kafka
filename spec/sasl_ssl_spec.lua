@@ -7,14 +7,17 @@ local broker_list_sasl_ssl = {
     { host = "broker", port = 9093 },
     { host = "broker2", port = 9093 },
 }
+
+local broker_list_sasl_ssl_proxy = {
+  { host = "kafkaproxy", port = 9093 }
+}
+
 local sasl_config = { strategy="sasl",
                       mechanism="PLAIN",
                       user="admin",
                       password="admin-secret" }
 local client_config_sasl_ssl = {
     ssl = true,
-    client_cert = CERT,
-    client_priv_key = PRIV_KEY,
     auth_config = sasl_config
 }
 
@@ -55,4 +58,29 @@ describe("Testing sasl ssl client", function()
     assert.is_nil(err)
     assert.is_number(tonumber(offset))
   end)
+end)
+
+describe("Testing sasl plain client with tcp proxy", function()
+  before_each(function()
+    cli = client:new(broker_list_sasl_ssl_proxy, client_config_sasl_ssl)
+    create_topics()
+  end)
+
+  it("to build the metatable correctly with proxy #test", function()
+    assert.are.equal(cli.socket_config.ssl, client_config_sasl_ssl.ssl)
+    assert.are.equal(cli.socket_config.ssl_verify, false)
+    assert.are.equal(cli.auth_config.mechanism, sasl_config.mechanism)
+    assert.are.equal(cli.auth_config.user, sasl_config.user)
+    assert.are.equal(cli.auth_config.password, sasl_config.password)
+  end)
+
+  it("setup producers correctly with proxy #test", function()
+    local p, err = producer:new(broker_list_sasl_ssl_proxy, client_config_sasl_ssl)
+    assert.is_nil(err)
+    local offset, err = p:send("test", key, message)
+    assert.is_nil(err)
+    assert.is_number(tonumber(offset))
+  end)
+
+
 end)

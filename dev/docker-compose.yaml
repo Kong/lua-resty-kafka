@@ -210,5 +210,23 @@ services:
     networks:
       kafka:
 
+  kong:
+    image: kong/kong:3.6
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/kong.yaml
+      KONG_STREAM_LISTEN: "0.0.0.0:9092 reuseport backlog=65536, 0.0.0.0:9093 ssl reuseport backlog=65536"
+      KONG_ROUTER_FLAVOR: traditional
+    ports:
+      - "9092"
+      - "9093"
+    networks:
+      kafka:
+        aliases:
+          - "fake"
+          - "kafkaproxy"
+    volumes:
+      - ./kong/kong.yaml:/kong/kong.yaml
+      
 networks:
     kafka:

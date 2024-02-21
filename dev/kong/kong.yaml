@@ -1,0 +1,25 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+- host: broker
+  name: kafka_broker1
+  port: 9093
+  protocol: tcp
+  routes:
+  - name: kafka_broker1
+    preserve_host: true
+    snis:
+    - "kafkaproxy"
+    protocols:
+    - tls_passthrough
+- host: tcpbin.com
+  name: fake_service
+  port: 4243
+  protocol: tcp
+  routes:
+  - name: fake_route
+    snis:
+    - "fake"
+    protocols:
+    - tls_passthrough

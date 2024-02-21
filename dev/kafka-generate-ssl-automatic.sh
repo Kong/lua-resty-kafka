@@ -151,7 +151,7 @@ do
   openssl x509 -req -CA $CA_CERT_FILE -CAkey $trust_store_private_key_file \
     -in $KEYSTORE_SIGN_REQUEST -out $KEYSTORE_SIGNED_CERT \
     -days $VALIDITY_IN_DAYS -CAcreateserial \
-    -extfile <(printf 'subjectAltName=DNS:localhost,DNS:kafka,DNS:zookeeper,DNS:broker,DNS:broker2')
+    -extfile <(printf 'subjectAltName=DNS:localhost,DNS:kafka,DNS:zookeeper,DNS:broker,DNS:broker2,DNS:kafkaproxy')
   # creates $KEYSTORE_SIGN_REQUEST_SRL which is never used or needed.
 
   echo
