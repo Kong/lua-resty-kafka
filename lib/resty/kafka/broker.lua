@@ -76,7 +76,6 @@ function _M.send_receive(self, request)
         local _, err = sock:sslhandshake(nil, self.host, self.config.ssl_verify)
         -- TODO END
         if err then
-            ngx_log(ngx.ERR, "failed the ssl handshake, darn")
             return nil, "failed to do SSL handshake with " ..
                         self.host .. ":" .. tostring(self.port) .. ": " .. err, true
         end
