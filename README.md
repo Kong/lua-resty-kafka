@@ -15,7 +15,7 @@ Table of Contents
   - [resty.kafka.client](#restykafkaclient)
     - [Methods](#methods)
       - [new](#new)
-      - [fetch_metadata](#fetch_metadata)
+      - [fetch\_metadata](#fetch_metadata)
       - [refresh](#refresh)
   - [resty.kafka.producer](#restykafkaproducer)
     - [Methods](#methods-1)

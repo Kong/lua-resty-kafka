@@ -239,7 +239,7 @@ function _M.new(self, broker_list, client_config)
         topic_partitions = {},
         brokers = {},
         supported_api_versions = {},
-        client_id = "worker" .. pid(),
+        client_id = opts.client_id or ("worker" .. pid()),
         socket_config = socket_config,
         auth_config = opts.auth_config or nil,
     }, mt)
