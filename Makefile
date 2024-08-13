@@ -5,10 +5,16 @@ LUA_INCLUDE_DIR ?= $(PREFIX)/include
 LUA_LIB_DIR ?=     $(PREFIX)/lib/lua/$(LUA_VERSION)
 INSTALL ?= install
 
-TOKENID := $(shell sed -n 1p dev/tokens/delegation-tokens.env)
-TOKENHMAC := $(shell sed -n 2p dev/tokens/delegation-tokens.env)
+TOKENID := $(shell awk '{print $$1}' dev/tokens/delegation-tokens.env)
+TOKENHMAC := $(shell awk '{print $$2}' dev/tokens/delegation-tokens.env)
 
 .PHONY: all install
+
+# Check if docker-compose is installed, fall back to `docker compose` if not
+COMPOSE_BIN := $(shell command -v docker-compose 2> /dev/null)
+ifeq ($(COMPOSE_BIN),)
+	COMPOSE_BIN := docker compose
+endif
 
 
 all: ;
@@ -24,23 +30,23 @@ setup-certs:
 	cd dev/; bash kafka-generate-ssl-automatic.sh; cd -
 
 devup: setup-certs
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml up -d
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic test --replica-assignment 1
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic test1 --replica-assignment 1
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic brokerdown --replica-assignment 2
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml up -d
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic test --replica-assignment 1
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic test1 --replica-assignment 1
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic brokerdown --replica-assignment 2
 
 test:
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T openresty luarocks make
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T -e TOKENID=$(TOKENID) -e TOKENHMAC=$(TOKENHMAC) openresty busted
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T openresty luarocks make
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T -e TOKENID=$(TOKENID) -e TOKENHMAC=$(TOKENHMAC) openresty busted
 
 devdown:
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml down --remove-orphans
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml down --remove-orphans
 
-devshell: delegation-token
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -e TOKENID=$(TOKENID) -e TOKENHMAC=$(TOKENHMAC) openresty /bin/bash
+devshell:
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -e TOKENID=$(TOKENID) -e TOKENHMAC=$(TOKENHMAC) openresty /bin/bash
 
 devlogs:
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml logs
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml logs
 
 delegation-token:
-	docker-compose -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml run create-delegation-token
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml run create-delegation-token

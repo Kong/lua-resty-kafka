@@ -45,7 +45,7 @@ services:
           echo sleeping;
           sleep 1;
         done;
-        kafka-delegation-tokens --bootstrap-server broker:29093 --create --max-life-time-period -1 --command-config /etc/kafka/client.config --renewer-principal User:admin | awk '/TOKENID/{getline; print}' | tr ' ' '\n'| head -2 > /etc/kafka/tokens/delegation-tokens.env"
+        kafka-delegation-tokens --bootstrap-server broker:29093 --create --max-life-time-period -1 --command-config /etc/kafka/client.config --renewer-principal User:admin | awk '/TOKENID/{getline; print}' > /etc/kafka/tokens/delegation-tokens.env"
     healthcheck:
       test: nc -z broker 9092
     volumes:
@@ -59,6 +59,7 @@ services:
   broker:
     image: confluentinc/cp-kafka:6.2.0
     hostname: broker
+    container_name: broker
     depends_on:
       - zookeeper
     healthcheck:
@@ -126,6 +127,7 @@ services:
   broker2:
     image: confluentinc/cp-kafka:6.2.0
     hostname: broker2
+    container_name: broker2
     depends_on:
       - zookeeper
     healthcheck:
@@ -227,6 +229,6 @@ services:
           - "kafkaproxy"
     volumes:
       - ./kong/kong.yaml:/kong/kong.yaml
-      
+
 networks:
     kafka:

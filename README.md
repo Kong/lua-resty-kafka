@@ -15,7 +15,7 @@ Table of Contents
   - [resty.kafka.client](#restykafkaclient)
     - [Methods](#methods)
       - [new](#new)
-      - [fetch_metadata](#fetch_metadata)
+      - [fetch\_metadata](#fetch_metadata)
       - [refresh](#refresh)
   - [resty.kafka.producer](#restykafkaproducer)
     - [Methods](#methods-1)
@@ -474,3 +474,6 @@ See Also
 * the [sarama](https://github.com/Shopify/sarama)
 
 [Back to TOC](#table-of-contents)
+
+
+test
