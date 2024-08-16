@@ -16,6 +16,12 @@ jobs:
       - name: Create delegation tokens
         run: make delegation-token
       - name: Run busted tests
+        env:
+          CONFLUENT_BOOTSTRAP_SERVER: ${{ secrets.KONG_SPEC_TEST_CONFLUENT_HOST }}
+          CONFLUENT_BOOTSTRAP_PORT: ${{ secrets.KONG_SPEC_TEST_CONFLUENT_PORT }}
+          CONFLUENT_API_KEY: ${{ secrets.KONG_SPEC_TEST_CONFLUENT_CLUSTER_API_KEY }}
+          CONFLUENT_API_SECRET: ${{ secrets.KONG_SPEC_TEST_CONFLUENT_CLUSTER_API_SECRET }}
+          CONFLUENT_TOPIC: ${{ secrets.KONG_SPEC_TEST_CONFLUENT_TOPIC }}
         run: make test
       - name: Get logs
         if: ${{ failure() }}
