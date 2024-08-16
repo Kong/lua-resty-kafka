@@ -53,15 +53,18 @@ describe("Testing Confluent Cloud", function()
     assert.is_not_nil(brokers)
     assert.is_same("b0-" .. confluent_bootstrap_server_adr, brokers[0].host)
     assert.are.equal(brokers[0].port, 9092)
+
+    local first_partition = partitions[0]
+    table.sort(first_partition.replicas)
+    table.sort(first_partition.isr)
     -- Check if return was assigned to cli metatable
     assert.are.same({
                   errcode = 0,
                   id = 0,
                   leader = 4,
-                  replicas = { [1] = 4, [2] = 5, [3] = 0},
-                  isr = { [1] = 4, [2] = 5, [3] = 0},
-                  }
-                    ,partitions[0])
+                  replicas = { [1] = 0, [2] = 4, [3] = 5},
+                  isr = { [1] = 0, [2] = 4, [3] = 5},
+                  }, first_partition)
     -- Check if partitions were fetched correctly
     assert.is_not_nil(cli.topic_partitions[confluent_topic])
     -- Check if cli partitions metatable was set correctly

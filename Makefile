@@ -37,7 +37,10 @@ devup: setup-certs
 
 test:
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T openresty luarocks make
-	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T -e TOKENID=$(TOKENID) -e TOKENHMAC=$(TOKENHMAC) openresty busted
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T                                           \
+								 -e TOKENID=$(TOKENID) -e TOKENHMAC=$(TOKENHMAC) -e CONFLUENT_BOOTSTRAP_SERVER=$(CONFLUENT_BOOTSTRAP_SERVER) \
+								 -e CONFLUENT_BOOTSTRAP_PORT=$(CONFLUENT_BOOTSTRAP_PORT) -e CONFLUENT_API_KEY=$(CONFLUENT_API_KEY)           \
+								 -e CONFLUENT_API_SECRET=$(CONFLUENT_API_SECRET) -e CONFLUENT_TOPIC=$(CONFLUENT_TOPIC) openresty busted
 
 devdown:
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml down --remove-orphans
