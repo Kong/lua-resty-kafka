@@ -4,8 +4,8 @@ services:
     build: ./openresty
     container_name: dev_openresty
     hostname: test
-    depends_on:
-      - rest-proxy
+    # depends_on:
+    #   - rest-proxy
     ports:
       - "8080:8081"
     volumes:
@@ -32,4 +32,3 @@ services:
         target: /var/run/docker.sock
     networks:
       kafka:
-

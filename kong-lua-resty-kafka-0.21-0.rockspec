@@ -1,8 +1,8 @@
 package = "kong-lua-resty-kafka"
-version = "0.20-0"
+version = "0.21-0"
 source = {
    url = "git+https://github.com/Kong/lua-resty-kafka",
-   tag = "v0.20"
+   tag = "feat/consume"
 }
 description = {
    summary = "Lua Kafka client driver for the ngx_lua based on the cosocket API",
@@ -39,6 +39,8 @@ build = {
    modules = {
       ["resty.kafka.broker"] = "lib/resty/kafka/broker.lua",
       ["resty.kafka.client"] = "lib/resty/kafka/client.lua",
+      ["resty.kafka.consumer"] = "lib/resty/kafka/consumer.lua",
+      ["resty.kafka.consumer.config"] = "lib/resty/kafka/consumer/config.lua",
       ["resty.kafka.errors"] = "lib/resty/kafka/errors.lua",
       ["resty.kafka.producer"] = "lib/resty/kafka/producer.lua",
       ["resty.kafka.request"] = "lib/resty/kafka/request.lua",
@@ -47,5 +49,9 @@ build = {
       ["resty.kafka.sendbuffer"] = "lib/resty/kafka/sendbuffer.lua",
       ["resty.kafka.auth"] = "lib/resty/kafka/auth/init.lua",
       ["resty.kafka.auth.strategies.sasl"] = "lib/resty/kafka/auth/strategies/sasl.lua",
+      ["resty.kafka.protocol.common"] = "lib/resty/kafka/protocol/common.lua",
+      ["resty.kafka.protocol.client"] = "lib/resty/kafka/protocol/client.lua",
+      ["resty.kafka.protocol.consumer"] = "lib/resty/kafka/protocol/consumer.lua",
+      ["resty.kafka.protocol.record"] = "lib/resty/kafka/protocol/record.lua",
    }
 }

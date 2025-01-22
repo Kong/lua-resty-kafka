@@ -1,9 +1,5 @@
 -- Copyright (C) Dejiang Zhu(doujiang24)
-
-
 local bit = require("bit")
-local request = require("resty.kafka.request")
-
 
 local setmetatable = setmetatable
 local byte = string.byte
@@ -35,6 +31,26 @@ function _M.new(self, str, api_version)
 end
 
 
+local function _int4(str, offset)
+    local a, b, c, d = strbyte(str, offset, offset + 3)
+
+    -- Check if any byte is nil
+    if not (a and b and c and d) then
+        return nil
+    end
+
+    return bor(lshift(a, 24), lshift(b, 16), lshift(c, 8), d)
+end
+
+
+function _M.int4(self)
+    local str = self.str
+    local offset = self.offset
+    self.offset = offset + 4
+
+    return _int4(str, offset)
+end
+
 local function _int8(str, offset)
     return byte(str, offset)
 end
@@ -47,12 +63,24 @@ function _M.int8(self)
     return _int8(str, offset)
 end
 
+-- local function _int16(str, offset)
+--     local high = byte(str, offset)
+--     -- high padded
+--     return bor((high >= 128) and 0xffff0000 or 0,
+--             lshift(high, 8),
+--             byte(str, offset + 1))
+-- end
 local function _int16(str, offset)
-    local high = byte(str, offset)
-    -- high padded
-    return bor((high >= 128) and 0xffff0000 or 0,
-            lshift(high, 8),
-            byte(str, offset + 1))
+  local high = byte(str, offset)
+  local low = byte(str, offset + 1)
+  local value = bor(lshift(high, 8), low)
+
+  -- Sign extend if negative
+  if high >= 128 then
+    value = value - 0x10000
+  end
+
+  return value
 end
 
 
@@ -68,8 +96,10 @@ end
 local function _int32(str, offset)
     local offset = offset or 1
     local a, b, c, d = strbyte(str, offset, offset + 3)
+
     return bor(lshift(a, 24), lshift(b, 16), lshift(c, 8), d)
 end
+
 _M.to_int32 = _int32
 
 
@@ -85,12 +115,10 @@ end
 local function _int64(str, offset)
     local a, b, c, d, e, f, g, h = strbyte(str, offset, offset + 7)
 
-    --[[
-    -- only 52 bit accuracy
-    local hi = bor(lshift(a, 24), lshift(b, 16), lshift(c, 8), d)
-    local lo = bor(lshift(f, 16), lshift(g, 8), h)
-    return hi * 4294967296 + 16777216 * e + lo
-    --]]
+    -- Check if any byte is nil
+    if not (a and b and c and d and e and f and g and h) then
+        return nil
+    end
 
     return 4294967296LL * bor(lshift(a, 56), lshift(b, 48), lshift(c, 40), lshift(d, 32))
             + 16777216LL * e
@@ -98,7 +126,6 @@ local function _int64(str, offset)
 end
 
 
--- XX return cdata: LL
 function _M.int64(self)
     local str = self.str
     local offset = self.offset

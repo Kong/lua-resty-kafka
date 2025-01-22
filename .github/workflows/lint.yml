@@ -25,7 +25,7 @@ jobs:
 
     steps:
     - name: Checkout source code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # Optional step to run on only changed files
     - name: Get changed files
@@ -37,7 +37,7 @@ jobs:
 
     - name: Lua Check
       if: steps.changed-files.outputs.any_changed == 'true'
-      uses: Kong/public-shared-actions/code-check-actions/lua-lint@33449c46c6766a3d3c8f167cc383381225862b36
+      uses: Kong/public-shared-actions/code-check-actions/lua-lint@main
       with:
         additional_args: '--no-default-config'
         files: ${{ steps.changed-files.outputs.all_changed_files }}

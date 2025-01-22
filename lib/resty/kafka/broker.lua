@@ -38,6 +38,7 @@ local function _sock_send_receive(sock, request)
             sock:close()
             return nil, err, true
         end
+        return nil, err, true
     end
 
     return response:new(data, request.api_version), nil, true
@@ -60,7 +61,8 @@ function _M.send_receive(self, request)
     end
     local keepalive = self.config.keepalive or false
 
-    sock:settimeout(self.config.socket_timeout)
+    -- TODO: reset to sane default
+    sock:settimeout(10000000)
 
     local ok, err = sock:connect(self.host, self.port)
     if not ok then
@@ -92,8 +94,7 @@ function _M.send_receive(self, request)
 
         ok, err = auth:authenticate(sock)
         if not ok then
-            local msg = "failed to do " .. self.auth.mechanism .." auth with " ..
-                        self.host .. ":" .. tostring(self.port) .. ": " .. err, true
+            local msg = "failed to do " .. self.auth.mechanism .." auth with " ..  self.host .. ":" .. tostring(self.port) .. ": " .. err
             return nil, msg
         end
     end

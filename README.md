@@ -23,6 +23,11 @@ Table of Contents
       - [send](#send)
       - [offset](#offset)
       - [flush](#flush)
+  - [resty.kafka.consumer](#restykafkaconsumer)
+    - [Methods](#methods-2)
+      - [new](#new-2)
+      - [list\_offset](#list_offset)
+      - [fetch](#fetch)
 - [Installation](#installation)
 - [Development](#development)
 - [Testing](#testing)
@@ -371,18 +376,12 @@ Always return `true`.
 [Back to TOC](#table-of-contents)
 
 
-resty.kafka.basic-consumer
+resty.kafka.consumer
 ----------------------
 
-To load this module, just do this
 
-```lua
-    local bconsumer = require "resty.kafka.basic-consumer"
-```
+TODO
 
-This module is a minimalist implementation of a consumer, providing the `list_offset` API for querying by time or getting the start and end offset and the `fetch` API for getting messages in a topic.
-
-In a single call, only the information of a single partition in a single topic can be fetched, and batch fetching is not supported for now. The basic consumer does not support the consumer group related API, so you need to fetch the message after getting the offset through the `list_offset` API, or your service can manage the offset itself.
 
 [Back to TOC](#table-of-contents)
 

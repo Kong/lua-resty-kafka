@@ -1,7 +1,5 @@
 -- Copyright (C) Dejiang Zhu(doujiang24)
 
-
-local response = require "resty.kafka.response"
 local request = require "resty.kafka.request"
 local broker = require "resty.kafka.broker"
 local client = require "resty.kafka.client"
@@ -260,7 +258,7 @@ local function _flush(premature, self)
             break
         end
 
-        local partition_id, err = choose_partition(self, topic, key)
+        local partition_id, _ = choose_partition(self, topic, key)
         if not partition_id then
             partition_id = -1
         end

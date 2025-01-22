@@ -19,8 +19,12 @@ local _M = {
     [14]    = 'OffsetsLoadInProgressCode',
     [15]    = 'ConsumerCoordinatorNotAvailableCode',
     [16]    = 'NotCoordinatorForConsumerCode',
+    [17]    = 'InvalidTopic',
+    [29]    = 'TopicAuthorizationFailed',
     [34]    = 'IllegalSaslState',
     [63]    = 'DelegationTokenOwnerMisMatch',
+    [25]    = 'UnknownMemberId',
+    [24]    = 'InvalidGroupId',
     [87]    = 'InvalidRecord'
 }
 

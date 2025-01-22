@@ -4,7 +4,9 @@
 local broker = require "resty.kafka.broker"
 local request = require "resty.kafka.request"
 
-local errors = require "resty.kafka.errors"
+local protocol = require "resty.kafka.protocol.common"
+
+local Errors = require("resty.kafka.errors")
 
 
 local setmetatable = setmetatable
@@ -108,44 +110,6 @@ local function metadata_decode(resp)
 end
 
 
-local function api_versions_encode(client_id)
-    local id = 1    -- hard code correlation_id
-    return request:new(request.ApiVersionsRequest, id, client_id, request.API_VERSION_V2)
-end
-
-
-local function api_versions_decode(resp)
-    local errcode = resp:int16()
-
-    local api_keys_num = resp:int32()
-    local api_keys = new_tab(0, api_keys_num)
-    for i = 1, api_keys_num do
-        local api_key, min_version, max_version = resp:int16(), resp:int16(), resp:int16()
-        api_keys[api_key] = {
-            min_version = min_version,
-            max_version = max_version,
-        }
-    end
-
-    return errcode, api_keys
-end
-
-
-local function _fetch_api_versions(broker, client_id)
-    local resp, err = broker:send_receive(api_versions_encode(client_id))
-    if not resp then
-        return nil, err
-    else
-        local errcode, api_versions = api_versions_decode(resp)
-
-        if errcode ~= 0 then
-            return nil, Errors[err]
-        else
-            return api_versions, nil
-        end
-    end
-end
-
 
 local function _fetch_metadata(self, new_topic)
     local topics, num = {}, 0
@@ -221,7 +185,7 @@ local function _fetch_apiversions(self)
             -- error code first 16 bits
             local error_code = resp:int16()
             if error_code ~= 0 then
-                return {}, errors[error_code]
+                return {}, Errors[error_code]
             end
             -- number of api_keys in reponse
             local api_keys_num = resp:int32()
@@ -257,7 +221,28 @@ local function meta_refresh(premature, self, interval)
 end
 
 
+local function negotiate_all_api_versions(supported_versions)
+    local negotiated = {}
 
+    -- Override negotiation strategy here if needed
+    -- For example, you might want to increment the lowest supported version
+    -- for a specific ApiKey
+    local override_min = {
+        [request.OffsetCommitRequest] = 1,
+        [request.JoinGroupRequest] = 5,
+        [request.OffsetFetchRequest] = 1,
+    }
+
+    for api_key, version_info in pairs(supported_versions) do
+        -- also check if our provided min_version doesn't exceed the max_version
+        if override_min[api_key] and override_min[api_key] > version_info.max_version then
+            return nil, "Provided min_version exceeds max_version for ApiKey: " .. api_key
+        end
+        negotiated[api_key] = override_min[api_key] or version_info.min_version
+    end
+
+    return negotiated
+end
 
 function _M.new(self, broker_list, client_config)
     local opts = client_config or {}
@@ -272,19 +257,27 @@ function _M.new(self, broker_list, client_config)
         client_priv_key = opts.client_priv_key or nil,
     }
 
-
     local cli = setmetatable({
         broker_list = broker_list,
         topic_partitions = {},
         brokers = {},
         supported_api_versions = {},
+        negotiated_api_versions = {},  -- New field for cached negotiated versions
         client_id = opts.client_id or ("worker" .. pid()),
         socket_config = socket_config,
         auth_config = opts.auth_config or nil,
     }, mt)
 
+    -- Fetch API versions immediately
+    local versions, _ = _fetch_apiversions(cli)
+    if versions then
+        cli.supported_api_versions = versions
+        -- Cache negotiated versions
+        cli.negotiated_api_versions = negotiate_all_api_versions(versions)
+    end
+
     if opts.refresh_interval then
-        meta_refresh(nil, cli, opts.refresh_interval / 1000) -- in ms
+        meta_refresh(nil, cli, opts.refresh_interval / 1000)
     end
 
     return cli
@@ -335,5 +328,64 @@ function _M.choose_broker(self, topic, partition_id)
     return config
 end
 
+
+function _M.get_group_coordinator(self, group_id)
+    if not group_id then
+        return nil, "group_id is required"
+    end
+
+    local broker_list = self.broker_list
+    local sc = self.socket_config
+
+    -- Create find coordinator request
+    local req = request:new(request.FindCoordinatorRequest,
+                            --FIXME: correlation_id
+                            protocol.correlation_id({ correlation_id = 12345}),
+                            self.client_id,
+                            1)  -- Using API version 1
+
+    req:string(group_id)  -- coordinator_key (group_id)
+    req:int8(0)  -- coordinator_type (0 for consumer group)
+
+    -- Try each broker until we find the coordinator
+    for i = 1, #broker_list do
+        local host, port = broker_list[i].host, broker_list[i].port
+        local bk = broker:new(host, port, sc, self.auth_config)
+
+        local resp, err = bk:send_receive(req)
+        if resp then
+            -- Decode the response
+            local coordinator = {
+                throttle_time_ms = resp:int32(),
+                error_code = resp:int16(),
+                error_message = resp:string(),
+                coordinator_id = resp:int32(),
+                host = resp:string(),
+                port = resp:int32()
+            }
+
+            if coordinator.error_code == 0 then
+                return {
+                    host = coordinator.host,
+                    port = coordinator.port,
+                    id = coordinator.coordinator_id,
+                    sasl_config = self.auth_config
+                }
+            end
+
+            -- If we got an error response, try the next broker
+            ngx_log(ERR, "find coordinator error: ", Errors[coordinator.error_code])
+        else
+            ngx_log(ERR, "failed to get coordinator from broker: ", err)
+        end
+    end
+
+    return nil, "failed to find coordinator for group: " .. group_id
+end
+
+-- Add a method to get negotiated version
+function _M.get_api_version(self, api_key)
+    return self.negotiated_api_versions[api_key]
+end
 
 return _M

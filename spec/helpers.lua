@@ -5,6 +5,8 @@ local response = require "resty.kafka.response"
 
 local broker_list_plain = {
 	{ host = "broker", port = 9092 },
+	{ host = "broker2", port = 9092 },
+	{ host = "broker3", port = 9092 },
 }
 
 -- Load certificate
@@ -36,7 +38,7 @@ function convert_to_hex(req)
 end
 
 -- define topics, keys and messages etc.
-TEST_TOPIC = "test"
+TEST_TOPIC = "test0"
 TEST_TOPIC_1 = "test1"
 KEY = "key"
 MESSAGE = "message"

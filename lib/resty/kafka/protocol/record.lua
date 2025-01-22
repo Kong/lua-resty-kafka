@@ -5,7 +5,6 @@ local math = require("math")
 local crc32c = protocol.crc32c
 local ngx_log = ngx.log
 local ngx_crc32 = ngx.crc32_long
-local ERR = ngx.ERR
 local INFO = ngx.INFO
 local table_insert = table.insert
 local band = bit.band
@@ -34,6 +33,7 @@ local function _message_set_v0_1_decode(resp, ret)
     -- negative value is not considered here.
     if message.offset < 0 then
         resp:close()
+        -- TODO: This needs verification
         return "empty message" -- return error
     end
 
@@ -48,7 +48,7 @@ local function _message_set_v0_1_decode(resp, ret)
     local magic_byte = resp:int8()
 
     -- TODO: support compressed Message Set
-    local attributes = resp:int8()
+    resp:int8()
 
     -- message version 1 added timestamp
     if magic_byte == protocol.API_VERSION_V1 then
@@ -75,10 +75,12 @@ local function _message_set_v2_decode(resp, ret, fetch_offset)
 
     -- RecordBatch decoder, refer to this documents
     -- https://kafka.apache.org/documentation/#recordbatch
+    -- There is a bug when 'key' is a message is empty
+    -- Kafka allows for empty keys though
     local base_offset = resp:int64() -- baseOffset
     local batch_length = resp:int32() -- batchLength
-    local partition_leader_epoch = resp:int32() -- partitionLeaderEpoch
-    local magic_byte = resp:int8() -- magic
+    resp:int32() -- partitionLeaderEpoch
+    resp:int8() -- magic
     local crc = resp:int32() -- crc
 
     -- Get all remaining message bodies by length for crc. The crc content
@@ -107,13 +109,13 @@ local function _message_set_v2_decode(resp, ret, fetch_offset)
     -- RecordBatch contains the timestamp starting value and the
     -- maximum value of these records.
     local first_timestamp = resp:int64() -- firstTimestamp
-    local max_timestamp = resp:int64() -- maxTimestamp
+    resp:int64() -- maxTimestamp
 
     -- These fields are intended to support idempotent messages.
     -- The features are NYI
-    local producer_id = resp:int64() -- producerId
-    local producer_epoch = resp:int16() -- producerEpoch
-    local base_sequence = resp:int32() -- baseSequence
+    resp:int64() -- producerId
+    resp:int16() -- producerEpoch
+    resp:int32() -- baseSequence
 
     local record_num = resp:int32() -- [records] array length
 
@@ -126,7 +128,7 @@ local function _message_set_v2_decode(resp, ret, fetch_offset)
         local message_end = resp.offset + len
 
         -- According to the protocol, only reserved.
-        local record_attributes = resp:int8()
+        resp:int8()
 
         -- Offset of this Record from RecordBatch's base value.
         local timestamp_delta = resp:varlong()
@@ -170,7 +172,7 @@ end
 -- @author bzp2010 <bzp2010@apache.org>
 function _M.message_set_decode(resp, fetch_offset)
     local ret = {}
-    local message_set_size = resp:int32()
+    resp:int32()
 
     -- Keep parsing the message until all the data in the
     -- current response is exhausted
@@ -179,7 +181,7 @@ function _M.message_set_decode(resp, fetch_offset)
         -- [MessageSet] message magic_byte, it contains Message version
         local message_version = resp:peek_int(16, 1)
 
-        local messages, messages_set_info, err
+        local err
         if message_version == 0 or message_version == 1 then
             -- old MessageSet v0 or v1
             err = _message_set_v0_1_decode(resp, ret)
@@ -189,7 +191,7 @@ function _M.message_set_decode(resp, fetch_offset)
         end
 
         if err then
-            ngx_log(ERR, "failed to decode message set, err: ", err)
+            ngx_log(INFO, "failed to decode message set, err: ", err)
         end
     end
 

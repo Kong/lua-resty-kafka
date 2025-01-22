@@ -33,7 +33,10 @@ _M.OffsetRequest = 2
 _M.MetadataRequest = 3
 _M.OffsetCommitRequest = 8
 _M.OffsetFetchRequest = 9
-_M.ConsumerMetadataRequest = 10
+_M.SyncGroupRequest = 14
+_M.FindCoordinator = 10
+_M.HeartBeatRequest = 12
+_M.JoinGroupRequest = 11
 _M.SaslHandshakeRequest = 17
 _M.ApiVersionsRequest = 18
 _M.SaslAuthenticateRequest = 36
@@ -61,6 +64,11 @@ end)())
 -- Generate and self-increment correlation IDs
 -- The correlated is a table containing the correlation_id attribute
 function _M.correlation_id(correlated)
+    -- Initialize correlation_id if it doesn't exist
+    if not correlated.correlation_id then
+        correlated.correlation_id = 0
+    end
+
     local id = (correlated.correlation_id + 1) % 1073741824 -- 2^30
     correlated.correlation_id = id
 
