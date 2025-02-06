@@ -137,6 +137,16 @@ function _M:_join_group(group_id, topics, configuration)
     return nil, "failed to decode join group response"
   end
 
+
+  -- If I'm not the leader of the group, abort here. This isn't currently supported
+  -- There be dragons. In the current partition assignment strategy, every member of a group
+  -- can read from all subscribed topics and all partitions
+  -- This may cause race-conditions when data is read from the same partition by multiple consumers
+  -- and commits are not respected. This can result in data being read twice (or however times a subscription is created)
+  if result.leader ~= result.member_id then
+    return nil, "You are not the leader of the group. Currently only one consumer can be part of a group"
+  end
+
   -- Check for errors
   if result.error_code and result.error_code ~= 0 then
     local err_msg = Errors[result.error_code] or "unknown error"
@@ -164,7 +174,6 @@ function _M:heartbeat(group_id, generation_id, member_id)
   if not heartbeat_result then
     return nil, "failed to decode heartbeat response"
   end
-  print("heartbeat_result = " .. require("inspect")(heartbeat_result))
 
   if heartbeat_result.error_code and heartbeat_result.error_code ~= 0 then
     local err_msg = Errors[heartbeat_result.error_code] or "unknown error"
@@ -213,7 +222,7 @@ function _M:partition_assignment(group_metadata)
   -- create partition assignment when leader
   local group_assignment = {}
   if leader == member_id then
-    ngx_log(INFO, "I am the leader: ", leader, ", group_id: ", group_id)
+    ngx_log(INFO, "I am the leader: ", leader, ", for group_id: ", group_id)
     -- As leader, create assignments for all members
     for _, member in ipairs(members) do
       -- Create member assignment in protocol format
@@ -246,6 +255,7 @@ function _M:sync_group(group_id, generation_id, member_id, group_assignment)
   if not sync_req then
     return nil, "failed to encode sync group request"
   end
+
 
   -- Send sync group request
   local sync_resp, err = self.coordinator:send_receive(sync_req)
@@ -314,7 +324,16 @@ function _M:subscribe(group_id, topics, configuration)
 
 
   if not self.coordinator then
-    local coordinator_conf, coord_err = cli:get_group_coordinator(group_id)
+    -- for robustness, try this 3 times
+    local coordinator_conf, coord_err
+    for _ = 1, 3 do
+      coordinator_conf, coord_err = cli:get_group_coordinator(group_id)
+      if coordinator_conf then
+        break
+      end
+      ngx_log(WARN, "failed to get group coordinator, retrying : " .. (coord_err or "unknown error"))
+      ngx.sleep(1)
+    end
     if not coordinator_conf then
       return nil, "failed to get group coordinator: " .. (coord_err or "unknown error")
     end
@@ -375,6 +394,10 @@ function _M:subscribe(group_id, topics, configuration)
     if err then
       ngx_log(WARN, "heartbeat failed: ", err)
     end
+
+    -- TODO: periodically check for new metadata and update assignments
+    -- if metadata has changed, trigger a sync_group call
+    -- (or a new join process alltogether as we're a static member)
   end)
 
   if not ok then

@@ -51,6 +51,7 @@ devup: setup-certs
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --create --topic brokerdown
 
 debug:
+	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-consumer-groups --bootstrap-server broker:9092 --group testing-consume --describe
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --list
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --describe --topic test0
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --describe --topic test1
@@ -63,7 +64,6 @@ debug:
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --describe --topic test8
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --describe --topic test9
 	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-topics --bootstrap-server broker:9092 --describe --topic test10
-	$(COMPOSE_BIN) -f dev/docker-compose.yaml -f dev/docker-compose.dev.yaml exec -T broker kafka-consumer-groups --bootstrap-server broker:9092 --group testing-consume --describe
 
 
 test:

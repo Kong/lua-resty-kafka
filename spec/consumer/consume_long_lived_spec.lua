@@ -13,6 +13,7 @@ local broker_list_plain = BROKER_LIST
 -- run it 10 times just for good measure
 for i = 1, 1 do
   describe("Test conntinuous polling; run #" .. i, function()
+
     local function produce_messages(topic)
       -- TODO: make this a sync producer to ensure we fetch the messages in time
       local producer_instance, producer_err = producer:new(broker_list_plain)

@@ -6,7 +6,6 @@ local response = require "resty.kafka.response"
 local broker_list_plain = {
 	{ host = "broker", port = 9092 },
 	{ host = "broker2", port = 9092 },
-	{ host = "broker3", port = 9092 },
 }
 
 -- Load certificate
