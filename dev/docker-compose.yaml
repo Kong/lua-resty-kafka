@@ -1,4 +1,3 @@
-version: '3.5'
 services:
 
   zookeeper:
@@ -45,7 +44,7 @@ services:
           echo sleeping;
           sleep 1;
         done;
-        kafka-delegation-tokens --bootstrap-server broker:29093 --create --max-life-time-period -1 --command-config /etc/kafka/client.config --renewer-principal User:admin | awk '/TOKENID/{getline; print}' > /etc/kafka/tokens/delegation-tokens.env"
+        kafka-delegation-tokens --bootstrap-server broker:29093 --create --max-life-time-period -1 --command-config /etc/kafka/client.config --renewer-principal User:admin | awk 'NR>5 {print $1, '\t', $2}' > /etc/kafka/tokens/delegation-tokens.env"
     healthcheck:
       test: nc -z broker 9092
     volumes:
