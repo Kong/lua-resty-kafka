@@ -332,7 +332,7 @@ local function _sasl_auth(self, sock)
         cbind_input = gs2_header .. cbind_data
 
         local channel_binding = "c=" .. ngx.encode_base64(cbind_input)
-        local _,user_salt,iteration_count = server_first_message:match("r=(.+),s=(.+),i=(.+)")
+        local server_nonce,user_salt,iteration_count = server_first_message:match("r=(.+),s=(.+),i=(.+)")
         if tonumber(iteration_count) < 4096 then
 			return nil, "Iteration count < 4096 which is the suggested minimum according to RFC 5802."
 		end
@@ -351,7 +351,7 @@ local function _sasl_auth(self, sock)
         if not (stored_key) then
             return nil, tostring(err)
         end
-        local client_final_message_without_proof = channel_binding .. "," .. nonce
+        local client_final_message_without_proof = channel_binding .. ",r=" .. server_nonce
         local auth_message = client_first_message_bare .. "," .. server_first_message .. "," .. client_final_message_without_proof
         --  AuthMessage     := client-first-message-bare + "," +
         --                     server-first-message + "," +
