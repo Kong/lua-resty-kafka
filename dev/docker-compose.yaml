@@ -1,8 +1,7 @@
-version: '3.5'
 services:
 
   zookeeper:
-    image: confluentinc/cp-zookeeper:6.2.0
+    image: confluentinc/cp-zookeeper:7.7.3
     hostname: zookeeper
     ports:
       - "2181:2181"
@@ -18,7 +17,7 @@ services:
       - ./zookeper_jaas.conf:/etc/kafka/zookeper_jaas.conf
 
   add-kafka-users:
-    image: confluentinc/cp-kafka:6.2.0
+    image: confluentinc/cp-kafka:7.7.3
     networks:
       kafka:
     command: >
@@ -34,7 +33,7 @@ services:
       test: nc -z broker 9092
 
   create-delegation-token:
-    image: confluentinc/cp-kafka:6.2.0
+    image: confluentinc/cp-kafka:7.7.3
     networks:
       kafka:
     user: root
@@ -45,7 +44,7 @@ services:
           echo sleeping;
           sleep 1;
         done;
-        kafka-delegation-tokens --bootstrap-server broker:29093 --create --max-life-time-period -1 --command-config /etc/kafka/client.config --renewer-principal User:admin | awk '/TOKENID/{getline; print}' > /etc/kafka/tokens/delegation-tokens.env"
+        kafka-delegation-tokens --bootstrap-server broker:29093 --create --max-life-time-period -1 --command-config /etc/kafka/client.config --renewer-principal User:admin | awk 'NR>5 {print $1, '\t', $2}' > /etc/kafka/tokens/delegation-tokens.env"
     healthcheck:
       test: nc -z broker 9092
     volumes:
@@ -57,7 +56,7 @@ services:
       - ./broker-config/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf
 
   broker:
-    image: confluentinc/cp-kafka:6.2.0
+    image: confluentinc/cp-kafka:7.7.3
     hostname: broker
     container_name: broker
     depends_on:
@@ -125,7 +124,7 @@ services:
       - ./broker-config/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf
 
   broker2:
-    image: confluentinc/cp-kafka:6.2.0
+    image: confluentinc/cp-kafka:7.7.3
     hostname: broker2
     container_name: broker2
     depends_on:
@@ -193,7 +192,7 @@ services:
       - ./broker-config/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf
 
   rest-proxy:
-    image: confluentinc/cp-kafka-rest:6.2.0
+    image: confluentinc/cp-kafka-rest:7.7.3
     depends_on:
       - broker
       - broker2
