@@ -22,6 +22,8 @@ jobs:
           CONFLUENT_API_KEY: ${{ secrets.KONG_SPEC_TEST_CONFLUENT_CLUSTER_API_KEY }}
           CONFLUENT_API_SECRET: ${{ secrets.KONG_SPEC_TEST_CONFLUENT_CLUSTER_API_SECRET }}
           CONFLUENT_TOPIC: ${{ secrets.KONG_SPEC_TEST_CONFLUENT_TOPIC }}
+          EVENTHUB_CREDENTIALS: ${{ secrets.KONG_SPEC_TEST_EVENTHUB_CREDENTIALS }}
+          EVENTHUB_HOST: ${{ secrets.KONG_SPEC_TEST_EVENTHUB_HOST }}
         run: make test
       - name: Get logs
         if: ${{ failure() }}
