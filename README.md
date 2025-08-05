@@ -3,6 +3,11 @@ Name
 
 lua-resty-kafka - Lua kafka client driver for the ngx_lua based on the cosocket API
 
+Deprecation Warning
+===================
+
+This repository has been deprecated. It will no longer receive updates. Corresponding code will be maintained inside the kong-ee repo in the future.
+
 Table of Contents
 =================
 
